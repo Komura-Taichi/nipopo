@@ -16,7 +16,7 @@ describe("App", () => {
         await user.type(tagInput, "タグ1");
         await user.click(tagAddButton);
 
-        const todayTagList = screen.getByLabelText("今日の振り返りタグ一覧")
+        const todayTagList = screen.getByLabelText("今日のタグ一覧")
         expect(within(todayTagList).getByText("タグ1")).toBeInTheDocument();
     });
 
@@ -33,7 +33,7 @@ describe("App", () => {
 
         await user.click(screen.getByRole("button", { name: "タグ 「タグ1」 を削除" }));
 
-        const todayTagList = screen.getByLabelText("今日の振り返りタグ一覧")
+        const todayTagList = screen.getByLabelText("今日のタグ一覧")
         expect(within(todayTagList).queryByText("タグ1")).not.toBeInTheDocument();
     });
 
@@ -92,6 +92,6 @@ describe("App", () => {
         await user.click(saveButton);
 
         const invalidDialog = await screen.findByRole("dialog");
-        expect(within(invalidDialog).getByRole("heading", { name: "入力が不十分" }));
+        expect(within(invalidDialog).getByRole("heading", { name: "タグ または 内容を入力してください" }));
     });
 });
