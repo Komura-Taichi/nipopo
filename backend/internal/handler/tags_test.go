@@ -1,0 +1,103 @@
+package handler_test
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/Komura-Taichi/nipopo/backend/internal/handler"
+)
+
+type mockTagsUsecase struct {
+	listCalled bool
+	listQ      string
+	listLimit  int
+	listCursor string
+
+	createCalled bool
+	createName   string
+
+	listResponse   handler.TagsPage
+	listErr        error
+	createResponse handler.Tag
+	createErr      error
+}
+
+func (f *mockTagsUsecase) List(ctx context.Context, q string, limit int, cursor string) (handler.TagsPage, error) {
+	f.listCalled = true
+	f.listQ, f.listLimit, f.listCursor = q, limit, cursor
+	return f.listResponse, f.listErr
+}
+
+func (f *mockTagsUsecase) Create(ctx context.Context, name string) (handler.Tag, error) {
+	f.createCalled = true
+	f.createName = name
+	return f.createResponse, f.createErr
+}
+
+func TestListTags(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
+		m := &mockTagsUsecase{
+			listResponse: handler.TagsPage{
+				Items: []handler.Tag{
+					{ID: "t1", Name: "タグ1"},
+					{ID: "t2", Name: "タグ2"},
+				},
+				NextCursor: "next123",
+			},
+		}
+
+		h := handler.ListTags(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/v1/tags?q=タグ&limit=5&cursor=cur123", nil)
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードとヘッダの確認
+		assertStatus(t, rec, http.StatusOK)
+		assertContentType(t, rec)
+
+		// 呼び出し確認
+		if !m.listCalled {
+			t.Fatalf("List was not called")
+		}
+		if m.listQ != "タグ" || m.listLimit != 5 || m.listCursor != "cur123" {
+			t.Fatalf("List args mismatch: q=%q limit=%d cursor=%q", m.listQ, m.listLimit, m.listCursor)
+		}
+
+		// レスポンスの確認
+		var got handler.TagsPage
+		unmarshalJSON(t, rec.Body.Bytes(), &got)
+		if got.NextCursor != "next123" {
+			t.Fatalf("NextCursor mismatch: got=%q", got.NextCursor)
+		}
+		if len(got.Items) != 2 || got.Items[0].ID != "t1" || got.Items[1].Name != "タグ1" {
+			t.Fatalf("Items mismatch: %+v", got.Items)
+		}
+	})
+}
+
+func assertStatus(t *testing.T, rec *httptest.ResponseRecorder, want int) {
+	t.Helper()
+
+	if rec.Code != want {
+		t.Fatalf("status=%d want=%d", rec.Code, want)
+	}
+}
+
+func assertContentType(t *testing.T, rec *httptest.ResponseRecorder) {
+	t.Helper()
+
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json; charset=utf-8" {
+		t.Fatalf("content-type=%q", ct)
+	}
+}
+
+func unmarshalJSON(t *testing.T, data []byte, v any) {
+	t.Helper()
+	if err := json.Unmarshal(data, v); err != nil {
+		t.Fatalf("invalid json: %v body=%s", err, string(data))
+	}
+}
