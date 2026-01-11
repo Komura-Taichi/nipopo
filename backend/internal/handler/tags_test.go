@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Komura-Taichi/nipopo/backend/internal/handler"
+	"github.com/Komura-Taichi/nipopo/backend/internal/usecase"
 )
 
 type mockTagsLister struct {
@@ -25,7 +27,7 @@ type mockTagsCreator struct {
 	createCalled bool
 	createName   string
 
-	createResponse handler.Tag
+	createResponse usecase.CreateTagResult
 	createErr      error
 }
 
@@ -35,7 +37,7 @@ func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor s
 	return f.listResponse, f.listErr
 }
 
-func (f *mockTagsCreator) Create(ctx context.Context, name string) (handler.Tag, error) {
+func (f *mockTagsCreator) Create(ctx context.Context, name string) (usecase.CreateTagResult, error) {
 	f.createCalled = true
 	f.createName = name
 	return f.createResponse, f.createErr
@@ -78,7 +80,7 @@ func TestListTags(t *testing.T) {
 			t.Fatalf("NextCursor mismatch: got=%q", got.NextCursor)
 		}
 		if len(got.Items) != 2 || got.Items[0].ID != "t1" || got.Items[1].Name != "タグ1" {
-			t.Fatalf("Items mismatch: %+v", got.Items)
+			t.Fatalf("Items mismatch: got=%+v", got.Items)
 		}
 	})
 
@@ -114,6 +116,52 @@ func TestListTags(t *testing.T) {
 		if !m.listCalled {
 			t.Fatalf("List was not called")
 		}
+	})
+}
+
+func TestCreateTag(t *testing.T) {
+	t.Run("OK_new", func(t *testing.T) {
+		m := &mockTagsCreator{
+			createResponse: usecase.CreateTagResult{
+				Tag:     usecase.Tag{ID: "t10", Name: "タグ10"},
+				Created: true,
+			},
+		}
+		h := handler.CreateTag(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
+		req.Header.Set("Content-Type", "application/json")
+		h.ServeHTTP(rec, req)
+
+		// ステータスコード (201) とヘッダの確認
+		assertStatus(t, rec, http.StatusCreated)
+		assertContentType(t, rec)
+
+		// レスポンスはhandler.Tag型であるはず
+		var got handler.Tag
+		unmarshalJSON(t, rec.Body.Bytes(), &got)
+		if got.ID != "t10" || got.Name != "タグ10" {
+			t.Fatalf("Tag mismatch: got=%+v", got)
+		}
+	})
+
+	t.Run("OK_existing", func(t *testing.T) {
+		m := &mockTagsCreator{
+			createResponse: usecase.CreateTagResult{
+				Tag:     usecase.Tag{ID: "t10", Name: "タグ10"},
+				Created: false,
+			},
+		}
+		h := handler.CreateTag(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
+		req.Header.Set("Content-Type", "application/json")
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (200)
+		assertStatus(t, rec, http.StatusOK)
 	})
 }
 
