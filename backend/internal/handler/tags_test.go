@@ -3,6 +3,7 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,28 +11,31 @@ import (
 	"github.com/Komura-Taichi/nipopo/backend/internal/handler"
 )
 
-type mockTagsUsecase struct {
+type mockTagsLister struct {
 	listCalled bool
 	listQ      string
 	listLimit  int
 	listCursor string
 
+	listResponse handler.TagsPage
+	listErr      error
+}
+
+type mockTagsCreator struct {
 	createCalled bool
 	createName   string
 
-	listResponse   handler.TagsPage
-	listErr        error
 	createResponse handler.Tag
 	createErr      error
 }
 
-func (f *mockTagsUsecase) List(ctx context.Context, q string, limit int, cursor string) (handler.TagsPage, error) {
+func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor string) (handler.TagsPage, error) {
 	f.listCalled = true
 	f.listQ, f.listLimit, f.listCursor = q, limit, cursor
 	return f.listResponse, f.listErr
 }
 
-func (f *mockTagsUsecase) Create(ctx context.Context, name string) (handler.Tag, error) {
+func (f *mockTagsCreator) Create(ctx context.Context, name string) (handler.Tag, error) {
 	f.createCalled = true
 	f.createName = name
 	return f.createResponse, f.createErr
@@ -39,7 +43,7 @@ func (f *mockTagsUsecase) Create(ctx context.Context, name string) (handler.Tag,
 
 func TestListTags(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		m := &mockTagsUsecase{
+		m := &mockTagsLister{
 			listResponse: handler.TagsPage{
 				Items: []handler.Tag{
 					{ID: "t1", Name: "タグ1"},
@@ -75,6 +79,40 @@ func TestListTags(t *testing.T) {
 		}
 		if len(got.Items) != 2 || got.Items[0].ID != "t1" || got.Items[1].Name != "タグ1" {
 			t.Fatalf("Items mismatch: %+v", got.Items)
+		}
+	})
+
+	t.Run("BadRequest_limit_not_int", func(t *testing.T) {
+		m := &mockTagsLister{}
+		h := handler.ListTags(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/v1/tags?limit=abc", nil)
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (400)
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// 表示数が不適切なのにListは呼び出してほしくない
+		if m.listCalled {
+			t.Fatalf("List should not be called on bad request")
+		}
+	})
+
+	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
+		m := &mockTagsLister{listErr: errors.New("intentional error")}
+		h := handler.ListTags(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/v1/tags?limit=5", nil)
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (500)
+		assertStatus(t, rec, http.StatusInternalServerError)
+
+		// そもそもListが呼び出されてないなら原因はそこ
+		if !m.listCalled {
+			t.Fatalf("List was not called")
 		}
 	})
 }
