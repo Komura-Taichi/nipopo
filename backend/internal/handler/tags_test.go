@@ -79,7 +79,9 @@ func TestListTags(t *testing.T) {
 		if got.NextCursor != "next123" {
 			t.Fatalf("NextCursor mismatch: got=%q", got.NextCursor)
 		}
-		if len(got.Items) != 2 || got.Items[0].ID != "t1" || got.Items[1].Name != "タグ1" {
+		if len(got.Items) != 2 ||
+			got.Items[0].ID != "t1" || got.Items[0].Name != "タグ1" ||
+			got.Items[1].ID != "t2" || got.Items[1].Name != "タグ2" {
 			t.Fatalf("Items mismatch: got=%+v", got.Items)
 		}
 	})
@@ -209,11 +211,12 @@ func TestCreateTag(t *testing.T) {
 	})
 
 	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
-		m := mockTagCreator{createErr: errors.New("intentional error")}
+		m := &mockTagCreator{createErr: errors.New("intentional error")}
 		h := handler.CreateTag(m)
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
+		req.Header.Set("Content-Type", "application/json")
 		h.ServeHTTP(rec, req)
 
 		// ステータスコードの確認 (500)
@@ -221,7 +224,7 @@ func TestCreateTag(t *testing.T) {
 
 		// そもそもCreateが呼び出されてないなら、おかしい
 		if !m.createCalled {
-			t.Fatalf("List was not called")
+			t.Fatalf("Create was not called")
 		}
 	})
 }
