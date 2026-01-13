@@ -23,7 +23,7 @@ type mockTagsLister struct {
 	listErr      error
 }
 
-type mockTagsCreator struct {
+type mockTagCreator struct {
 	createCalled bool
 	createName   string
 
@@ -37,7 +37,7 @@ func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor s
 	return f.listResponse, f.listErr
 }
 
-func (f *mockTagsCreator) Create(ctx context.Context, name string) (usecase.CreateTagResult, error) {
+func (f *mockTagCreator) Create(ctx context.Context, name string) (usecase.CreateTagResult, error) {
 	f.createCalled = true
 	f.createName = name
 	return f.createResponse, f.createErr
@@ -112,7 +112,7 @@ func TestListTags(t *testing.T) {
 		// ステータスコードの確認 (500)
 		assertStatus(t, rec, http.StatusInternalServerError)
 
-		// そもそもListが呼び出されてないなら原因はそこ
+		// そもそもListが呼び出されてないなら、おかしい
 		if !m.listCalled {
 			t.Fatalf("List was not called")
 		}
@@ -121,7 +121,7 @@ func TestListTags(t *testing.T) {
 
 func TestCreateTag(t *testing.T) {
 	t.Run("OK_new", func(t *testing.T) {
-		m := &mockTagsCreator{
+		m := &mockTagCreator{
 			createResponse: usecase.CreateTagResult{
 				Tag:     usecase.Tag{ID: "t10", Name: "タグ10"},
 				Created: true,
@@ -138,6 +138,14 @@ func TestCreateTag(t *testing.T) {
 		assertStatus(t, rec, http.StatusCreated)
 		assertContentType(t, rec)
 
+		// 呼び出し確認
+		if !m.createCalled {
+			t.Fatalf("Create was not called")
+		}
+		if m.createName != "タグ10" {
+			t.Fatalf("Create args mismatch: name=%q", m.createName)
+		}
+
 		// レスポンスはhandler.Tag型であるはず
 		var got handler.Tag
 		unmarshalJSON(t, rec.Body.Bytes(), &got)
@@ -147,7 +155,7 @@ func TestCreateTag(t *testing.T) {
 	})
 
 	t.Run("OK_existing", func(t *testing.T) {
-		m := &mockTagsCreator{
+		m := &mockTagCreator{
 			createResponse: usecase.CreateTagResult{
 				Tag:     usecase.Tag{ID: "t10", Name: "タグ10"},
 				Created: false,
@@ -162,6 +170,59 @@ func TestCreateTag(t *testing.T) {
 
 		// ステータスコードの確認 (200)
 		assertStatus(t, rec, http.StatusOK)
+	})
+
+	t.Run("BadRequest_invalid_json", func(t *testing.T) {
+		m := &mockTagCreator{}
+		h := handler.CreateTag(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{`)))
+		req.Header.Set("Content-Type", "application/json")
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (400)
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// 不適切な形式のJSONについて、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_empty_name", func(t *testing.T) {
+		m := &mockTagCreator{}
+		h := handler.CreateTag(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": ""}`)))
+		req.Header.Set("Content-Type", "application/json")
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (400)
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// タグ名が空なのに、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
+		m := mockTagCreator{createErr: errors.New("intentional error")}
+		h := handler.CreateTag(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (500)
+		assertStatus(t, rec, http.StatusInternalServerError)
+
+		// そもそもCreateが呼び出されてないなら、おかしい
+		if !m.createCalled {
+			t.Fatalf("List was not called")
+		}
 	})
 }
 
