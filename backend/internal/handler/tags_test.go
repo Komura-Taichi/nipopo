@@ -19,7 +19,7 @@ type mockTagsLister struct {
 	listLimit  int
 	listCursor string
 
-	listResponse handler.TagsPage
+	listResponse usecase.TagsPage
 	listErr      error
 }
 
@@ -31,7 +31,7 @@ type mockTagCreator struct {
 	createErr      error
 }
 
-func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor string) (handler.TagsPage, error) {
+func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor string) (usecase.TagsPage, error) {
 	f.listCalled = true
 	f.listQ, f.listLimit, f.listCursor = q, limit, cursor
 	return f.listResponse, f.listErr
@@ -46,8 +46,8 @@ func (f *mockTagCreator) Create(ctx context.Context, name string) (usecase.Creat
 func TestListTags(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		m := &mockTagsLister{
-			listResponse: handler.TagsPage{
-				Items: []handler.Tag{
+			listResponse: usecase.TagsPage{
+				Items: []usecase.Tag{
 					{ID: "t1", Name: "タグ1"},
 					{ID: "t2", Name: "タグ2"},
 				},
@@ -103,7 +103,7 @@ func TestListTags(t *testing.T) {
 		}
 	})
 
-	t.Run("BadRequest_limit_not_positive", func(t *testing.T) {
+	t.Run("BadRequest_limit_not_positive_or_zero", func(t *testing.T) {
 		m := &mockTagsLister{}
 		h := handler.ListTags(m)
 
