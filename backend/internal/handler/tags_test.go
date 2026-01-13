@@ -103,6 +103,23 @@ func TestListTags(t *testing.T) {
 		}
 	})
 
+	t.Run("BadRequest_limit_not_positive", func(t *testing.T) {
+		m := &mockTagsLister{}
+		h := handler.ListTags(m)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/v1/tags?limit=-1", nil)
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認 (400)
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// 表示数が不適切なのにListは呼び出してほしくない
+		if m.listCalled {
+			t.Fatalf("List should not be called on bad request")
+		}
+	})
+
 	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
 		m := &mockTagsLister{listErr: errors.New("intentional error")}
 		h := handler.ListTags(m)
