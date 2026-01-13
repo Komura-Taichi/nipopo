@@ -2,13 +2,13 @@ import { describe, expect, test } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import App from "../App";
+import Home from "../Home";
 
 describe("App", () => {
     test("タグの追加ができる", async () => {
         const user = userEvent.setup();
 
-        render(<App />);
+        render(<Home />);
 
         const tagInput = screen.getByPlaceholderText("タグを入力...");
         const tagAddButton = screen.getByRole("button", { name: "タグを追加" });
@@ -23,7 +23,7 @@ describe("App", () => {
     test("タグの削除ができる", async () => {
         const user = userEvent.setup();
 
-        render(<App />);
+        render(<Home />);
 
         const tagInput = screen.getByPlaceholderText("タグを入力...");
         const tagAddButton = screen.getByRole("button", { name: "タグを追加" });
@@ -40,7 +40,7 @@ describe("App", () => {
     test("頑張り度で星を選ぶと正しく反映される", async () => {
         const user = userEvent.setup();
 
-        render(<App />);
+        render(<Home />);
 
         const starButton = screen.getByRole("radio", { "name": "3 / 5" });
         await user.click(starButton);
@@ -52,7 +52,7 @@ describe("App", () => {
     test("できごと, タグ, 頑張り度を入力して記録ボタンを押すと記録ボタンが非アクティブになってテキストが変わる", async () => {
         const user = userEvent.setup();
 
-        render(<App />);
+        render(<Home />);
 
         const tagInput = screen.getByPlaceholderText("タグを入力...");
         const tagAddButton = screen.getByRole("button", { name: "タグを追加" });
@@ -77,7 +77,7 @@ describe("App", () => {
     test("できごとが抜けている状態で記録ボタンを押すとダイアログが表示される", async () => {
         const user = userEvent.setup();
 
-        render(<App />);
+        render(<Home />);
 
         const tagInput = screen.getByPlaceholderText("タグを入力...");
         const tagAddButton = screen.getByRole("button", { name: "タグを追加" });

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import './App.css';
 
-function App() {
+function Home() {
   const maxEffort = 5;
   const [inputTag, setInputTag] = useState<string>("");
   const [tags, setTags] = useState<string[]>(["研究", "勉強"]);
@@ -43,7 +42,6 @@ function App() {
 
   return (
     <>
-      <h1>nipopo</h1>
       <input type="text" placeholder="検索内容を入力..." aria-label="検索内容を入力" />
       <button aria-label="詳細検索">詳細検索</button>
 
@@ -133,4 +131,4 @@ function App() {
   );
 }
 
-export default App;
+export default Home;

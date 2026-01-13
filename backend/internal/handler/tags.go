@@ -46,6 +46,12 @@ func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 	}
 }
 
+func CreateTag(creator usecase.TagCreator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+	}
+}
+
 func parseLimit(limS string) (int, error) {
 	limSNoSpace := strings.TrimSpace(limS)
 	if limSNoSpace == "" {
