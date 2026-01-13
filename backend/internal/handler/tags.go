@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,15 +14,23 @@ func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 		q := r.URL.Query().Get("q")
 		cursor := r.URL.Query().Get("cursor")
 
-		limit, err := parseLimit(r.URL.Query().Get("limit"))
+		limitStr := r.URL.Query().Get("limit")
+		limit, err := parseLimit(limitStr)
 		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			writeErrorJSON(w, http.StatusBadRequest, "invalid limit",
+				map[string]any{
+					"field":  "limit",
+					"value":  limitStr,
+					"reason": err.Error(),
+				})
+
 			return
 		}
 
 		page, err := lister.List(r.Context(), q, limit, cursor)
 		if err != nil {
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			writeErrorJSON(w, http.StatusInternalServerError, "internal server error", nil)
+
 			return
 		}
 
@@ -63,13 +69,4 @@ func parseLimit(limS string) (int, error) {
 	}
 
 	return limit, nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(v); err != nil {
-		log.Printf("error happened while encoding JSON: %v", err)
-	}
 }
