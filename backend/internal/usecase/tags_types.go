@@ -1,24 +1,18 @@
 package usecase
 
-import "context"
+import (
+	"context"
 
-type Tag struct {
-	ID   string
-	Name string
-}
-
-type TagsPage struct {
-	Items      []Tag
-	NextCursor string
-}
+	"github.com/Komura-Taichi/nipopo/backend/internal/entity"
+)
 
 type CreateTagResult struct {
-	Tag     Tag
+	Tag     entity.Tag
 	Created bool
 }
 
 type TagsLister interface {
-	List(ctx context.Context, q string, limit int, cursor string) (TagsPage, error)
+	List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error)
 }
 
 type TagCreator interface {

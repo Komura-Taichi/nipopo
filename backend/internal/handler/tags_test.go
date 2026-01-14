@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Komura-Taichi/nipopo/backend/internal/entity"
 	"github.com/Komura-Taichi/nipopo/backend/internal/handler"
 	"github.com/Komura-Taichi/nipopo/backend/internal/usecase"
 )
@@ -19,7 +20,7 @@ type mockTagsLister struct {
 	listLimit  int
 	listCursor string
 
-	listResponse usecase.TagsPage
+	listResponse entity.TagsPage
 	listErr      error
 }
 
@@ -31,7 +32,7 @@ type mockTagCreator struct {
 	createErr      error
 }
 
-func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor string) (usecase.TagsPage, error) {
+func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error) {
 	f.listCalled = true
 	f.listQ, f.listLimit, f.listCursor = q, limit, cursor
 	return f.listResponse, f.listErr
@@ -46,8 +47,8 @@ func (f *mockTagCreator) Create(ctx context.Context, name string) (usecase.Creat
 func TestListTags(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		m := &mockTagsLister{
-			listResponse: usecase.TagsPage{
-				Items: []usecase.Tag{
+			listResponse: entity.TagsPage{
+				Items: []entity.Tag{
 					{ID: "t1", Name: "タグ1"},
 					{ID: "t2", Name: "タグ2"},
 				},
@@ -142,7 +143,7 @@ func TestCreateTag(t *testing.T) {
 	t.Run("OK_new", func(t *testing.T) {
 		m := &mockTagCreator{
 			createResponse: usecase.CreateTagResult{
-				Tag:     usecase.Tag{ID: "t10", Name: "タグ10"},
+				Tag:     entity.Tag{ID: "t10", Name: "タグ10"},
 				Created: true,
 			},
 		}
@@ -176,7 +177,7 @@ func TestCreateTag(t *testing.T) {
 	t.Run("OK_existing", func(t *testing.T) {
 		m := &mockTagCreator{
 			createResponse: usecase.CreateTagResult{
-				Tag:     usecase.Tag{ID: "t10", Name: "タグ10"},
+				Tag:     entity.Tag{ID: "t10", Name: "タグ10"},
 				Created: false,
 			},
 		}
