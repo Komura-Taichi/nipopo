@@ -42,9 +42,6 @@ func (r *TagRepository) Create(ctx context.Context, name string) (entity.Tag, er
 	_ = ctx
 
 	key := strings.TrimSpace(name)
-	if key == "" {
-		return entity.Tag{}, repository.ErrEmptyTagName
-	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()

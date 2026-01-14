@@ -34,7 +34,9 @@ func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 
 		page, err := lister.List(r.Context(), q, limit, cursor)
 		if err != nil {
-			writeErrorJSON(w, http.StatusInternalServerError, "internal server error", nil)
+			writeErrorJSON(w, http.StatusInternalServerError, "internal server error",
+				map[string]any{"reason": err.Error()},
+			)
 
 			return
 		}
@@ -76,7 +78,9 @@ func CreateTag(creator usecase.TagCreator) http.HandlerFunc {
 
 		createdTag, err := creator.Create(r.Context(), name)
 		if err != nil {
-			writeErrorJSON(w, http.StatusInternalServerError, "internal server error", nil)
+			writeErrorJSON(w, http.StatusInternalServerError, "internal server error",
+				map[string]any{"reason": err.Error()},
+			)
 
 			return
 		}
