@@ -46,12 +46,13 @@ func (r *TagRepository) Create(ctx context.Context, name string) (entity.Tag, er
 		return entity.Tag{}, repository.ErrEmptyTagName
 	}
 
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// 多重で作成されないように
 	if _, exists := r.nameToIdx[key]; exists {
 		return entity.Tag{}, repository.ErrAlreadyTagExists
 	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
 
 	// インメモリでは仮の連番ID
 	id := fmt.Sprintf("t%d", len(r.tags)+1)
