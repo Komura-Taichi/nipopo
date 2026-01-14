@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -8,6 +9,10 @@ import (
 
 	"github.com/Komura-Taichi/nipopo/backend/internal/usecase"
 )
+
+type createTagRequest struct {
+	Name string `json:"name"`
+}
 
 func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +53,41 @@ func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 
 func CreateTag(creator usecase.TagCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var req createTagRequest
+		// json形式が正しくない場合のテストに対応
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&req); err != nil {
+			writeErrorJSON(w, http.StatusBadRequest, "invalid json",
+				map[string]any{"reason": err.Error()},
+			)
 
+			return
+		}
+
+		// タグ名が空だった場合のテストに対応
+		name := strings.TrimSpace(req.Name)
+		if name == "" {
+			writeErrorJSON(w, http.StatusBadRequest, "empty tag name",
+				map[string]any{"field": "name"},
+			)
+
+			return
+		}
+
+		createdTag, err := creator.Create(r.Context(), name)
+		if err != nil {
+			writeErrorJSON(w, http.StatusInternalServerError, "internal server error", nil)
+
+			return
+		}
+
+		status := http.StatusOK
+		if createdTag.Created {
+			status = http.StatusCreated
+		}
+
+		response := Tag{ID: createdTag.Tag.ID, Name: createdTag.Tag.Name}
+		writeJSON(w, status, response)
 	}
 }
 
