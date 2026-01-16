@@ -18,8 +18,8 @@ type TagRepository struct {
 	// 作成順を保持
 	tags []entity.Tag
 
-	// タグ名 -> index のマッピング
-	nameToIdx map[string]int
+	// ユーザID+タグ名 -> index のマッピング
+	uidAndNameToIdx map[string]map[string]int
 }
 
 func (r *TagRepository) FindByName(ctx context.Context, userID string, name string) (entity.Tag, bool, error) {
@@ -30,7 +30,11 @@ func (r *TagRepository) FindByName(ctx context.Context, userID string, name stri
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	idx, ok := r.nameToIdx[key]
+	nameToIdx, ok := r.uidAndNameToIdx[userID]
+	if !ok {
+		return entity.Tag{}, false, nil
+	}
+	idx, ok := nameToIdx[key]
 	if !ok {
 		return entity.Tag{}, false, nil
 	}
@@ -46,8 +50,15 @@ func (r *TagRepository) Create(ctx context.Context, userID string, name string) 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	nameToIdx, ok := r.uidAndNameToIdx[userID]
+	// そのユーザが初めてタグを作る場合、初期化
+	if !ok {
+		nameToIdx = map[string]int{}
+		r.uidAndNameToIdx[userID] = nameToIdx
+	}
+
 	// 多重で作成されないように
-	if _, exists := r.nameToIdx[key]; exists {
+	if _, exists := nameToIdx[key]; exists {
 		return entity.Tag{}, repository.ErrAlreadyTagExists
 	}
 
@@ -56,7 +67,7 @@ func (r *TagRepository) Create(ctx context.Context, userID string, name string) 
 
 	tag := entity.Tag{UserID: userID, ID: id, Name: key}
 	r.tags = append(r.tags, tag)
-	r.nameToIdx[key] = len(r.tags) - 1
+	nameToIdx[key] = len(r.tags) - 1 // nameToIdxとuidAndNameToIdxは結びついているので
 
 	return tag, nil
 }
@@ -70,9 +81,12 @@ func (r *TagRepository) List(ctx context.Context, userID string, q string, limit
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	// qによるフィルタ
+	// userID, qによるフィルタ
 	filtered := make([]entity.Tag, 0, len(r.tags))
 	for _, tag := range r.tags {
+		if tag.UserID != userID {
+			continue
+		}
 		if q == "" || strings.Contains(tag.Name, q) {
 			filtered = append(filtered, tag)
 		}
