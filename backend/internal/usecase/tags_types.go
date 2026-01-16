@@ -12,9 +12,9 @@ type CreateTagResult struct {
 }
 
 type TagsLister interface {
-	List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error)
+	List(ctx context.Context, userID string, q string, limit int, cursor string) (entity.TagsPage, error)
 }
 
 type TagCreator interface {
-	Create(ctx context.Context, name string) (CreateTagResult, error)
+	Create(ctx context.Context, userID string, name string) (CreateTagResult, error)
 }

@@ -32,7 +32,13 @@ func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 			return
 		}
 
-		page, err := lister.List(r.Context(), q, limit, cursor)
+		// ユーザIDの取得 (r.Context() に埋め込まれている前提)
+		userID, ok := requireUserID(w, r)
+		if !ok {
+			return
+		}
+
+		page, err := lister.List(r.Context(), userID, q, limit, cursor)
 		if err != nil {
 			writeErrorJSON(w, http.StatusInternalServerError, "internal server error",
 				map[string]any{"reason": err.Error()},
@@ -76,7 +82,13 @@ func CreateTag(creator usecase.TagCreator) http.HandlerFunc {
 			return
 		}
 
-		createdTag, err := creator.Create(r.Context(), name)
+		// ユーザIDの取得 (r.Context() に埋め込まれている前提)
+		userID, ok := requireUserID(w, r)
+		if !ok {
+			return
+		}
+
+		createdTag, err := creator.Create(r.Context(), userID, name)
 		if err != nil {
 			writeErrorJSON(w, http.StatusInternalServerError, "internal server error",
 				map[string]any{"reason": err.Error()},

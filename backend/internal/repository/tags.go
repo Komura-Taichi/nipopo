@@ -7,7 +7,7 @@ import (
 )
 
 type TagRepository interface {
-	FindByName(ctx context.Context, name string) (entity.Tag, bool, error)
-	Create(ctx context.Context, name string) (entity.Tag, error)
-	List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error)
+	FindByName(ctx context.Context, userID string, name string) (entity.Tag, bool, error)
+	Create(ctx context.Context, userID string, name string) (entity.Tag, error)
+	List(ctx context.Context, userID string, q string, limit int, cursor string) (entity.TagsPage, error)
 }

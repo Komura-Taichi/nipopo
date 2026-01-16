@@ -11,11 +11,13 @@ import (
 
 	"github.com/Komura-Taichi/nipopo/backend/internal/entity"
 	"github.com/Komura-Taichi/nipopo/backend/internal/handler"
+	"github.com/Komura-Taichi/nipopo/backend/internal/handler/middleware"
 	"github.com/Komura-Taichi/nipopo/backend/internal/usecase"
 )
 
 type mockTagsLister struct {
 	listCalled bool
+	listUserID string
 	listQ      string
 	listLimit  int
 	listCursor string
@@ -26,21 +28,22 @@ type mockTagsLister struct {
 
 type mockTagCreator struct {
 	createCalled bool
+	createUserID string
 	createName   string
 
 	createResponse usecase.CreateTagResult
 	createErr      error
 }
 
-func (f *mockTagsLister) List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error) {
+func (f *mockTagsLister) List(ctx context.Context, userID string, q string, limit int, cursor string) (entity.TagsPage, error) {
 	f.listCalled = true
-	f.listQ, f.listLimit, f.listCursor = q, limit, cursor
+	f.listUserID, f.listQ, f.listLimit, f.listCursor = userID, q, limit, cursor
 	return f.listResponse, f.listErr
 }
 
-func (f *mockTagCreator) Create(ctx context.Context, name string) (usecase.CreateTagResult, error) {
+func (f *mockTagCreator) Create(ctx context.Context, userID string, name string) (usecase.CreateTagResult, error) {
 	f.createCalled = true
-	f.createName = name
+	f.createUserID, f.createName = userID, name
 	return f.createResponse, f.createErr
 }
 
@@ -56,7 +59,7 @@ func TestListTags(t *testing.T) {
 			},
 		}
 
-		h := handler.ListTags(m)
+		h := middleware.AuthStub("u1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?q=タグ&limit=5&cursor=cur123", nil)
@@ -69,6 +72,9 @@ func TestListTags(t *testing.T) {
 		// 呼び出し確認
 		if !m.listCalled {
 			t.Fatalf("List was not called")
+		}
+		if m.listUserID != "u1" {
+			t.Fatalf("List userID mismatch: got=%q want=%q", m.listUserID, "u1")
 		}
 		if m.listQ != "タグ" || m.listLimit != 5 || m.listCursor != "cur123" {
 			t.Fatalf("List args mismatch: q=%q limit=%d cursor=%q", m.listQ, m.listLimit, m.listCursor)
@@ -89,7 +95,7 @@ func TestListTags(t *testing.T) {
 
 	t.Run("BadRequest_limit_not_int", func(t *testing.T) {
 		m := &mockTagsLister{}
-		h := handler.ListTags(m)
+		h := middleware.AuthStub("u1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?limit=abc", nil)
@@ -106,7 +112,7 @@ func TestListTags(t *testing.T) {
 
 	t.Run("BadRequest_limit_not_positive_or_zero", func(t *testing.T) {
 		m := &mockTagsLister{}
-		h := handler.ListTags(m)
+		h := middleware.AuthStub("u1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?limit=-1", nil)
@@ -123,7 +129,7 @@ func TestListTags(t *testing.T) {
 
 	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
 		m := &mockTagsLister{listErr: errors.New("intentional error")}
-		h := handler.ListTags(m)
+		h := middleware.AuthStub("u1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?limit=5", nil)
@@ -147,7 +153,7 @@ func TestCreateTag(t *testing.T) {
 				Created: true,
 			},
 		}
-		h := handler.CreateTag(m)
+		h := middleware.AuthStub("u1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
@@ -161,6 +167,9 @@ func TestCreateTag(t *testing.T) {
 		// 呼び出し確認
 		if !m.createCalled {
 			t.Fatalf("Create was not called")
+		}
+		if m.createUserID != "u1" {
+			t.Fatalf("Create userID mismatch: got=%q want=%q", m.createUserID, "u1")
 		}
 		if m.createName != "タグ10" {
 			t.Fatalf("Create args mismatch: name=%q", m.createName)
@@ -181,7 +190,7 @@ func TestCreateTag(t *testing.T) {
 				Created: false,
 			},
 		}
-		h := handler.CreateTag(m)
+		h := middleware.AuthStub("u1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
@@ -194,7 +203,7 @@ func TestCreateTag(t *testing.T) {
 
 	t.Run("BadRequest_invalid_json", func(t *testing.T) {
 		m := &mockTagCreator{}
-		h := handler.CreateTag(m)
+		h := middleware.AuthStub("u1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{`)))
@@ -212,7 +221,7 @@ func TestCreateTag(t *testing.T) {
 
 	t.Run("BadRequest_empty_name", func(t *testing.T) {
 		m := &mockTagCreator{}
-		h := handler.CreateTag(m)
+		h := middleware.AuthStub("u1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": ""}`)))
@@ -230,7 +239,7 @@ func TestCreateTag(t *testing.T) {
 
 	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
 		m := &mockTagCreator{createErr: errors.New("intentional error")}
-		h := handler.CreateTag(m)
+		h := middleware.AuthStub("u1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))

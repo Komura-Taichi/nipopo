@@ -22,7 +22,7 @@ type TagRepository struct {
 	nameToIdx map[string]int
 }
 
-func (r *TagRepository) FindByName(ctx context.Context, name string) (entity.Tag, bool, error) {
+func (r *TagRepository) FindByName(ctx context.Context, userID string, name string) (entity.Tag, bool, error) {
 	_ = ctx
 
 	key := strings.TrimSpace(name)
@@ -38,7 +38,7 @@ func (r *TagRepository) FindByName(ctx context.Context, name string) (entity.Tag
 	return r.tags[idx], true, nil
 }
 
-func (r *TagRepository) Create(ctx context.Context, name string) (entity.Tag, error) {
+func (r *TagRepository) Create(ctx context.Context, userID string, name string) (entity.Tag, error) {
 	_ = ctx
 
 	key := strings.TrimSpace(name)
@@ -54,14 +54,14 @@ func (r *TagRepository) Create(ctx context.Context, name string) (entity.Tag, er
 	// インメモリでは仮の連番ID
 	id := fmt.Sprintf("t%d", len(r.tags)+1)
 
-	tag := entity.Tag{ID: id, Name: key}
+	tag := entity.Tag{UserID: userID, ID: id, Name: key}
 	r.tags = append(r.tags, tag)
 	r.nameToIdx[key] = len(r.tags) - 1
 
 	return tag, nil
 }
 
-func (r *TagRepository) List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error) {
+func (r *TagRepository) List(ctx context.Context, userID string, q string, limit int, cursor string) (entity.TagsPage, error) {
 	_ = ctx
 
 	q = strings.TrimSpace(q)

@@ -8,12 +8,15 @@ import (
 
 type mockTagRepo struct {
 	findCalled int
+	findUserID string
 	findName   string
 
 	createCalled bool
+	createUserID string
 	createName   string
 
 	listCalled bool
+	listUserID string
 	listQ      string
 	listLimit  int
 	listCursor string
@@ -30,9 +33,9 @@ type mockTagRepo struct {
 	listErr  error
 }
 
-func (m *mockTagRepo) FindByName(ctx context.Context, name string) (entity.Tag, bool, error) {
+func (m *mockTagRepo) FindByName(ctx context.Context, userID string, name string) (entity.Tag, bool, error) {
 	m.findCalled++
-	m.findName = name
+	m.findUserID, m.findName = userID, name
 
 	i := m.findCalled - 1
 	// 入れるデータが足りない場合
@@ -43,14 +46,14 @@ func (m *mockTagRepo) FindByName(ctx context.Context, name string) (entity.Tag, 
 	return m.findTags[i], m.findFounds[i], m.findErrs[i]
 }
 
-func (m *mockTagRepo) Create(ctx context.Context, name string) (entity.Tag, error) {
+func (m *mockTagRepo) Create(ctx context.Context, userID string, name string) (entity.Tag, error) {
 	m.createCalled = true
-	m.createName = name
+	m.createUserID, m.createName = userID, name
 	return m.createTag, m.createErr
 }
 
-func (m *mockTagRepo) List(ctx context.Context, q string, limit int, cursor string) (entity.TagsPage, error) {
+func (m *mockTagRepo) List(ctx context.Context, userID string, q string, limit int, cursor string) (entity.TagsPage, error) {
 	m.listCalled = true
-	m.listQ, m.listLimit, m.listCursor = q, limit, cursor
+	m.listUserID, m.listQ, m.listLimit, m.listCursor = userID, q, limit, cursor
 	return m.listPage, m.listErr
 }
