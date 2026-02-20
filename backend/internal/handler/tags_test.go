@@ -36,12 +36,14 @@ type mockTagCreator struct {
 }
 
 func (f *mockTagsLister) List(ctx context.Context, userID string, q string, limit int, cursor string) (entity.TagsPage, error) {
+	_ = ctx
 	f.listCalled = true
 	f.listUserID, f.listQ, f.listLimit, f.listCursor = userID, q, limit, cursor
 	return f.listResponse, f.listErr
 }
 
 func (f *mockTagCreator) Create(ctx context.Context, userID string, name string) (usecase.CreateTagResult, error) {
+	_ = ctx
 	f.createCalled = true
 	f.createUserID, f.createName = userID, name
 	return f.createResponse, f.createErr
