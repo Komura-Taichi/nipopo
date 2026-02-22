@@ -2,9 +2,11 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/Komura-Taichi/nipopo/backend/internal/entity"
+	"github.com/Komura-Taichi/nipopo/backend/internal/repository"
 	"github.com/Komura-Taichi/nipopo/backend/internal/usecase"
 )
 
@@ -81,14 +83,15 @@ func (m *mockTagRepoForList) Create(ctx context.Context, userID, name string) (e
 	return entity.Tag{}, nil
 }
 
-// -- ここまで ---
+// --- ここまで ---
 
 func TestTagCreator_Create(t *testing.T) {
 	const (
 		userID = "u1"
 		name   = "タグ1"
 	)
-	t.Run("OK_new", func(t *testing.T) {
+	// --- 正常系のテスト ---
+	t.Run("OK_new_tag", func(t *testing.T) {
 		m := &mockTagRepoForCreate{
 			// FindByNameで見つからない
 			findTags:   []entity.Tag{{}},
@@ -103,9 +106,7 @@ func TestTagCreator_Create(t *testing.T) {
 		tagUsecase := usecase.NewTagUsecase(m)
 
 		got, err := tagUsecase.Create(context.Background(), userID, name)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		assertUnexpectedError(t, err)
 		if !got.Created {
 			t.Fatalf("Created should be true")
 		}
@@ -128,4 +129,234 @@ func TestTagCreator_Create(t *testing.T) {
 			t.Fatalf("Create args mismatch: userID=%q name=%q", m.createUserID, m.createName)
 		}
 	})
+
+	t.Run("OK_existing_tag", func(t *testing.T) {
+		existingTag := entity.Tag{ID: "t_1", UserID: userID, Name: name}
+
+		m := &mockTagRepoForCreate{
+			// FindByNameで見つかる
+			findTags:   []entity.Tag{existingTag},
+			findFounds: []bool{true},
+			findErrs:   []error{nil},
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		got, err := tagUsecase.Create(context.Background(), userID, name)
+		assertUnexpectedError(t, err)
+		if got.Created {
+			t.Fatalf("Created should be false")
+		}
+		if got.Tag.ID != existingTag.ID || got.Tag.Name != existingTag.Name || got.Tag.UserID != existingTag.UserID {
+			t.Fatalf("tag mismatch: got=%+v want=%+v", got.Tag, existingTag)
+		}
+
+		// リポジトリ層のメソッド呼び出しに関する確認
+		if m.findCalled != 1 {
+			t.Fatalf("FindByName called %d times, want 1", m.findCalled)
+		}
+		if m.findUserID != existingTag.UserID || m.findName != existingTag.Name {
+			t.Fatalf("FindByName args mismatch: userID=%q name=%q", m.findUserID, m.findName)
+		}
+
+		// 既存ならCreateは呼ばれないはず
+		if m.createCalled {
+			t.Fatalf("Create should not be called for existing tag")
+		}
+	})
+
+	t.Run("OK_conflict_request", func(t *testing.T) {
+		existingTag := entity.Tag{ID: "t_1", UserID: userID, Name: name}
+
+		m := &mockTagRepoForCreate{
+			// 1回目のFindByNameで見つからず、
+			// 2回目のFindByNameで見つかる
+			findTags:   []entity.Tag{{}, existingTag},
+			findFounds: []bool{false, true},
+			findErrs:   []error{nil, nil},
+
+			// Create時に既に存在
+			createErr: repository.ErrAlreadyTagExists,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		got, err := tagUsecase.Create(context.Background(), existingTag.UserID, existingTag.Name)
+		assertUnexpectedError(t, err)
+
+		if got.Created {
+			t.Fatalf("Created should be false")
+		}
+		// Createの挙動としては、1回目FindByNameで見つからない -> CreateでErr -> もう一度FindByNameで見つかる -> 見つかったTagを返す が理想
+		if got.Tag.ID != existingTag.ID || got.Tag.Name != existingTag.Name || got.Tag.UserID != existingTag.UserID {
+			t.Fatalf("tag mismatch: got=%+v want=%+v", got.Tag, existingTag)
+		}
+
+		// リポジトリ層のメソッド呼び出しに関する確認
+		if m.findCalled != 2 {
+			t.Fatalf("FindByName called %d times, want 2", m.findCalled)
+		}
+		if !m.createCalled {
+			t.Fatalf("Create should be called")
+		}
+	})
+
+	// --- 異常系のテスト ---
+	t.Run("Err_empty_tag_name", func(t *testing.T) {
+		m := &mockTagRepoForCreate{}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.Create(context.Background(), userID, "")
+		if !errors.Is(err, usecase.ErrEmptyTagName) {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// repositoryのFindByNameもCreateも呼ばれないはず
+		if m.findCalled != 0 {
+			t.Fatalf("FindByName should not be called, but called %d times", m.findCalled)
+		}
+		if m.createCalled {
+			t.Fatal("Create should not be called")
+		}
+	})
+
+	t.Run("Err_find_error", func(t *testing.T) {
+		intentionalFindErr := errors.New("FindByName error")
+
+		m := &mockTagRepoForCreate{
+			// 1回目のFindByNameでエラーが出る
+			findTags:   []entity.Tag{{}},
+			findFounds: []bool{false},
+			findErrs:   []error{intentionalFindErr},
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.Create(context.Background(), userID, name)
+		// 未知のエラーであれば、そのままエラーを返すはず
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, intentionalFindErr) {
+			t.Fatalf("unexpected error: got=%v want=%v", err, intentionalFindErr)
+		}
+
+		// repositoryのFindByNameは1度だけ呼ばれるはず
+		if m.findCalled != 1 {
+			t.Fatalf("FindByName should be called once, but called %d times", m.findCalled)
+		}
+		// repositoryのCreateは呼ばれないはず
+		if m.createCalled {
+			t.Fatal("Create should not be called when FindByName returns error")
+		}
+	})
+
+	t.Run("Err_create_error", func(t *testing.T) {
+		intentionalCreateErr := errors.New("Create error")
+
+		m := &mockTagRepoForCreate{
+			// 1回目のFindByNameで見つからない
+			// 2回目のFindByNameは実行されない
+			findTags:   []entity.Tag{{}},
+			findFounds: []bool{false},
+			findErrs:   []error{nil},
+
+			// Create時に未知のエラーが発生
+			createErr: intentionalCreateErr,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.Create(context.Background(), userID, name)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, intentionalCreateErr) {
+			t.Fatalf("unexpected error: got=%v want=%v", err, intentionalCreateErr)
+		}
+
+		// repositoryのFindByNameは1度だけ呼ばれるはず
+		if m.findCalled != 1 {
+			t.Fatalf("FindByName should be called once, but called %d times", m.findCalled)
+		}
+		// repositoryのCreateは呼ばれるはず
+		if !m.createCalled {
+			t.Fatalf("Create should be called")
+		}
+	})
+
+	t.Run("Err_conflict_refind_error", func(t *testing.T) {
+		intentionalRefindError := errors.New("refind error")
+
+		m := &mockTagRepoForCreate{
+			// 1回目のFindByNameで見つからない
+			// 2回目のFindByNameでerror発生
+			findTags:   []entity.Tag{{}, {}},
+			findFounds: []bool{false, false},
+			findErrs:   []error{nil, intentionalRefindError},
+
+			// Create時に既に存在
+			createErr: repository.ErrAlreadyTagExists,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.Create(context.Background(), userID, name)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, intentionalRefindError) {
+			t.Fatalf("unexpected error: got=%v want=%v", err, intentionalRefindError)
+		}
+
+		// repositoryのFindByNameは2回呼ばれるはず
+		if m.findCalled != 2 {
+			t.Fatalf("FindByName should be called 2 times, but called %d times", m.findCalled)
+		}
+		// repositoryのCreateは呼ばれるはず
+		if !m.createCalled {
+			t.Fatalf("Create should be called")
+		}
+	})
+
+	t.Run("Err_conflict_refind_notfound_error", func(t *testing.T) {
+		m := &mockTagRepoForCreate{
+			// 1回目のFindByNameで見つからない
+			// 2回目のFindByNameでも見つからない (矛盾)
+			findTags:   []entity.Tag{{}, {}},
+			findFounds: []bool{false, false},
+			findErrs:   []error{nil, nil},
+
+			// Create時に既に存在
+			createErr: repository.ErrAlreadyTagExists,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.Create(context.Background(), userID, name)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, usecase.ErrContradictoryRepoState) {
+			t.Fatalf("unexpected error: got=%v want=%v", err, usecase.ErrContradictoryRepoState)
+		}
+
+		// repositoryのFindByNameは2回呼ばれるはず
+		if m.findCalled != 2 {
+			t.Fatalf("FindByName should be called 2 times, but called %d times", m.findCalled)
+		}
+		// repositoryのCreateは呼ばれるはず
+		if !m.createCalled {
+			t.Fatalf("Create should be called")
+		}
+	})
+}
+
+func assertUnexpectedError(t *testing.T, err error) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }
