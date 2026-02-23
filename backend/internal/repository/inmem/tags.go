@@ -63,7 +63,7 @@ func (r *TagRepository) Create(ctx context.Context, userID string, name string) 
 	}
 
 	// インメモリでは仮の連番ID
-	id := fmt.Sprintf("t%d", len(r.tags)+1)
+	id := fmt.Sprintf("t_%d", len(r.tags)+1)
 
 	tag := entity.Tag{UserID: userID, ID: id, Name: key}
 	r.tags = append(r.tags, tag)

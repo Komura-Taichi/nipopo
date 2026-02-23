@@ -3,6 +3,7 @@ package usecase_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/Komura-Taichi/nipopo/backend/internal/entity"
@@ -62,10 +63,12 @@ func (m *mockTagRepoForCreate) Create(ctx context.Context, userID, name string) 
 	return m.createTag, m.createErr
 }
 
-// インタフェースを満たすためのダミーメソッド
+// --- インタフェースを満たすためのダミーメソッド ---
 func (m *mockTagRepoForCreate) List(ctx context.Context, userID, q string, limit int, cursor string) (entity.TagsPage, error) {
 	return entity.TagsPage{}, nil
 }
+
+// --- ここまで ---
 
 func (m *mockTagRepoForList) List(ctx context.Context, userID, q string, limit int, cursor string) (entity.TagsPage, error) {
 	_ = ctx
@@ -349,6 +352,149 @@ func TestTagCreator_Create(t *testing.T) {
 		// repositoryのCreateは呼ばれるはず
 		if !m.createCalled {
 			t.Fatalf("Create should be called")
+		}
+	})
+}
+
+func TestTagLister_List(t *testing.T) {
+	const (
+		userID = "u1"
+		limit  = 20
+	)
+	t.Run("OK_first_page", func(t *testing.T) {
+		const (
+			q      = ""
+			cursor = ""
+		)
+
+		want := entity.TagsPage{
+			Items: []entity.Tag{
+				{ID: "t_1", UserID: userID, Name: "bar"},
+				{ID: "t_2", UserID: userID, Name: "foo"},
+			},
+			NextCursor: "t_2",
+		}
+
+		m := &mockTagRepoForList{
+			listPage: want,
+			listErr:  nil,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		got, err := tagUsecase.List(context.Background(), userID, q, limit, cursor)
+		assertUnexpectedError(t, err)
+
+		// タグ一覧やNextCursorが完全に一致するか
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("page mismatch: got=%+v want=%+v", got, want)
+		}
+
+		// repositoryのListは呼ばれるはず
+		if !m.listCalled {
+			t.Fatal("List should be called")
+		}
+		// repositoryのListに渡される引数は正しいか？
+		if m.listUserID != userID || m.listQ != q || m.listLimit != limit || m.listCursor != cursor {
+			t.Fatalf("List args mismatch: userID=%q q=%q limit=%d cursor=%q",
+				m.listUserID, m.listQ, m.listLimit, m.listCursor)
+		}
+	})
+
+	t.Run("OK_with_query_and_cursor", func(t *testing.T) {
+		const (
+			q      = "foo"
+			cursor = "t_2"
+		)
+
+		want := entity.TagsPage{
+			Items: []entity.Tag{
+				{ID: "t_2", UserID: userID, Name: "foo"},
+				{ID: "t_3", UserID: userID, Name: "foobar"},
+			},
+			NextCursor: "t_3",
+		}
+
+		m := &mockTagRepoForList{
+			listPage: want,
+			listErr:  nil,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		got, err := tagUsecase.List(context.Background(), userID, q, limit, cursor)
+		assertUnexpectedError(t, err)
+
+		// タグ一覧やNextCursorが完全に一致するか
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("page mismatch: got=%+v want=%+v", got, want)
+		}
+
+		// repositoryのListは呼ばれるはず
+		if !m.listCalled {
+			t.Fatal("List should be called")
+		}
+		// repositoryのListに渡される引数は正しいか？
+		if m.listUserID != userID || m.listQ != q || m.listLimit != limit || m.listCursor != cursor {
+			t.Fatalf("List args mismatch: userID=%q q=%q limit=%d cursor=%q",
+				m.listUserID, m.listQ, m.listLimit, m.listCursor)
+		}
+	})
+
+	t.Run("Err_list_error", func(t *testing.T) {
+		const (
+			q      = "foo"
+			cursor = "t_2"
+		)
+
+		intentionalErr := errors.New("List error")
+
+		m := &mockTagRepoForList{
+			listPage: entity.TagsPage{},
+			listErr:  intentionalErr,
+		}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.List(context.Background(), userID, q, limit, cursor)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+
+		// 発生したエラーがそのまま返ってくるか
+		if !errors.Is(err, intentionalErr) {
+			t.Fatalf("unexpected error: got=%v want=%v", err, intentionalErr)
+		}
+
+		// repositoryのListは呼ばれるはず
+		if !m.listCalled {
+			t.Fatal("List should be called")
+		}
+	})
+
+	t.Run("Err_invalid_cursor_error", func(t *testing.T) {
+		const (
+			q      = "foo"
+			cursor = "foo" // 不正なcursor (空文字列でもt_<連番>でもない)
+		)
+
+		m := &mockTagRepoForList{}
+
+		tagUsecase := usecase.NewTagUsecase(m)
+
+		_, err := tagUsecase.List(context.Background(), userID, q, limit, cursor)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+
+		// ErrInvalidCursorエラーが返るはず
+		if !errors.Is(err, usecase.ErrInvalidCursor) {
+			t.Fatalf("unexpected error: got=%v want=%v", err, usecase.ErrInvalidCursor)
+		}
+
+		// repositoryのListは呼ばれないはず
+		if m.listCalled {
+			t.Fatal("List should not be called when cursor invalid")
 		}
 	})
 }
