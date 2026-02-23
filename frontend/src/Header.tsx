@@ -8,8 +8,8 @@ function Header({
     activeTab: ActiveTab;
     onNavigate: (to: Tab) => void;
 }) {
-    const baseButtonStyle = "h-14 flex-1 border border-gray-400 bg-white text-lg font-semibold text-gray-800 hover:bg-gray-50";
-    const activeButtonStyle = "bg-gray-100";
+    const baseBtnStyle = "h-14 flex-1 border border-gray-400 bg-white text-lg font-semibold text-gray-800 hover:bg-gray-50";
+    const activeBtnStyle = "bg-gray-100";
 
     return (
         <div>
@@ -34,7 +34,7 @@ function Header({
             <nav className="mb-8 flex rounded-b-xl border-x border-b border-gray-400 bg-white">
                 <button
                     type="button"
-                    className={`${baseButtonStyle} rounded-bl-xl ${activeTab === "home" ? activeButtonStyle: ""}`}
+                    className={`${baseBtnStyle} rounded-bl-xl ${activeTab === "home" ? activeBtnStyle: ""}`}
                     aria-current={activeTab === "home" ? "page" : undefined}
                     onClick={() => onNavigate("home")}
                 >
@@ -42,7 +42,7 @@ function Header({
                 </button>
                 <button
                     type="button"
-                    className={`${baseButtonStyle} border-l-0 border-r-0 ${activeTab === "records" ? activeButtonStyle: ""}`}
+                    className={`${baseBtnStyle} border-l-0 border-r-0 ${activeTab === "records" ? activeBtnStyle: ""}`}
                     aria-current={activeTab === "records" ? "page" : undefined}
                     onClick={() => onNavigate("records")}
                 >
@@ -50,7 +50,7 @@ function Header({
                 </button>
                 <button
                     type="button"
-                    className={`${baseButtonStyle} rounded-br-xl ${activeTab === "contact" ? activeButtonStyle: ""}`}
+                    className={`${baseBtnStyle} rounded-br-xl ${activeTab === "contact" ? activeBtnStyle: ""}`}
                     aria-current={activeTab === "contact" ? "page" : undefined}
                     onClick={() => onNavigate("contact")}
                 >
