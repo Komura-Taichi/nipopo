@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from "react-router";
 
 import { secondaryBtnStyle } from "./styles";
 import type { RecentRecord } from "./types";
@@ -32,6 +33,8 @@ function Home() {
     },
   ]);
 
+  const navigate = useNavigate();
+
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const onAddTag = () => {
@@ -56,7 +59,7 @@ function Home() {
     const nowFormatted = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
 
     const newRecord: RecentRecord = {
-      id: `t_${recentRecords.length + 1}`,
+      id: `r_${recentRecords.length + 1}`,
       createdAt: nowFormatted,
       effort: effort,
       tags: tags,
@@ -101,6 +104,7 @@ function Home() {
             <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="今日のタグ一覧">
               {tags.map((t) => (
                 <TagChip
+                  key={t}
                   tagName={t}
                   onRemove={() => { setTags((prev) => prev.filter((cur_t) => cur_t !== t)) }}
                 />
@@ -158,7 +162,11 @@ function Home() {
           <div className="space-y-6">
             {recentRecords.map((r) => (
               <div key={r.id} className="space-y-3">
-                <RecentRecordCard recentRecord={r} maxEffort={maxEffort} />
+                <RecentRecordCard
+                  recentRecord={r}
+                  maxEffort={maxEffort}
+                  onClickDetail={(recordId) => navigate(`/records/${recordId}`)}
+                />
               </div>
             ))}
           </div>
