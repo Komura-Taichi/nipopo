@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// 仮の「最近のできごと」。
-// 本来、tagsの要素も型定義する。
-type RecentRecord = {
-  id: string;
-  createdAt: string;
-  effort: number;
-  tags: string[];
-  content: string;
-};
+import { secondaryBtnStyle } from "./styles";
+import type { RecentRecord } from "./types";
+import EffortStarsRadio from './components/EffortStarsRadio';
+import RecentRecordCard from './components/RecentRecordCard';
+import RecordSearchBar from './components/RecordSearchBar';
+import TagChip from "./components/TagChip";
+import TagInput from "./components/TagInput";
 
 function Home() {
   const maxEffort = 5;
@@ -35,15 +33,6 @@ function Home() {
   ]);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
-
-  const baseBtnStyle
-    = "h-10 border px-4 whitespace-nowrap text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400";
-  const primaryBtnStyle
-    = `${baseBtnStyle} border-sky-300 bg-sky-500 text-white hover:bg-sky-400`;
-  const secondaryBtnStyle
-    = `${baseBtnStyle} border-gray-300 bg-white text-gray-800 hover:bg-gray-50`;
-  const starStyle
-    = "text-3xl leading-none"
 
   const onAddTag = () => {
     if (!inputTag.trim()) {
@@ -98,28 +87,7 @@ function Home() {
   return (
     <div className="space-y-8">
       {/* レコード検索 */}
-      <div className="flex items-center">
-        <div className="flex flex-1">
-          <input
-            type="text"
-            placeholder="検索内容を入力..."
-            aria-label="検索内容を入力"
-            className="h-10 w-full rounded-l-lg border border-gray-300 px-3 text-sm outline-none focus:border-gray-400"
-          />
-          <button
-            type="button"
-            className={`${primaryBtnStyle} -ml-px rounded-r-lg`}
-          >
-            検索
-          </button>
-        </div>
-
-        <div className="ml-6">
-          <button type="button" className={`${secondaryBtnStyle} rounded-lg`}>
-            詳細検索
-          </button>
-        </div>
-      </div>
+      <RecordSearchBar />
 
       {/* 今日のできごと記入欄 */}
       <section className="rounded-xl border border-gray-300 p-6">
@@ -132,43 +100,17 @@ function Home() {
           <div className="flex-1">
             <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="今日のタグ一覧">
               {tags.map((t) => (
-                <span
-                  key={t}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-800"
-                >
-                  {t}
-                  <button
-                    type="button"
-                    aria-label={`タグ 「${t}」 を削除`}
-                    onClick={() => {
-                      setTags(prev => prev.filter((cur_t) => cur_t !== t))
-                    }}
-                    className="rounded-full px-1 text-gray-500 hover:bg-gray-100"
-                  >
-                    ×
-                  </button>
-                </span>
+                <TagChip
+                  tagName={t}
+                  onRemove={() => { setTags((prev) => prev.filter((cur_t) => cur_t !== t)) }}
+                />
               ))}
 
-              <div className="flex">
-                <input
-                  type="text"
-                  value={inputTag}
-                  placeholder="タグを入力..."
-                  aria-label="タグを入力"
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setInputTag(e.target.value);
-                  }}
-                  className="h-9 w-56 rounded-l-lg border border-gray-300 px-3 text-sm outline-none focus:border-gray-400"
-                />
-                <button
-                  aria-label="タグを追加"
-                  onClick={onAddTag}
-                  className="-ml-px h-9 rounded-r-lg border border-green-300 bg-green-400 px-4 text-lg font-semibold text-gray-800 hover:bg-green-500"
-                >
-                  +
-                </button>
-              </div>
+              <TagInput
+                inputTag={inputTag}
+                onChange={setInputTag}
+                onAddTag={onAddTag}
+              />
             </div>
           </div>
         </div>
@@ -188,26 +130,7 @@ function Home() {
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-gray-800">頑張り度</span>
             {/* 星 */}
-            <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <label
-                  key={n}
-                  className="cursor-pointer select-none"
-                >
-                  <input
-                    type="radio"
-                    name="effort"
-                    className="sr-only"
-                    aria-label={`${n} / ${maxEffort}`}
-                    checked={effort === n}
-                    onChange={() => setEffort(n)}
-                  />
-                  <span className={`${starStyle} ${n <= effort ? "text-yellow-400" : "text-gray-300"}`}>
-                    {n <= effort ? "★" : "☆"}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <EffortStarsRadio effort={effort} maxEffort={maxEffort} onChange={setEffort} />
 
             <span className="text-sm text-gray-700" aria-label="頑張り度の数字表記">
               {`${effort} / ${maxEffort}`}
@@ -225,6 +148,23 @@ function Home() {
         </div>
       </section>
 
+      {/* 最近のできごと */}
+      <section className="rounded-xl border border-gray-300 p-6">
+        <div className="mb-4 text-base font-semibold text-gray-800">最近のできごと</div>
+
+        {recentRecords.length === 0 ? (
+          <div className="text-sm text-gray-600">まだ記録がありません</div>
+        ) : (
+          <div className="space-y-6">
+            {recentRecords.map((r) => (
+              <div key={r.id} className="space-y-3">
+                <RecentRecordCard recentRecord={r} maxEffort={maxEffort} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section >
+
       {/* 入力エラーダイアログ */}
       <dialog
         ref={dialogRef}
@@ -240,45 +180,6 @@ function Home() {
           閉じる
         </button>
       </dialog>
-
-      <section className="rounded-xl border border-gray-300 p-6">
-        <div className="mb-4 text-base font-semibold text-gray-800">最近のできごと</div>
-
-        {recentRecords.length === 0 ? (
-          <div className="text-sm text-gray-600">まだ記録がありません</div>
-        ) : (
-          <div className="space-y-6">
-            {recentRecords.map((r) => (
-              <div key={r.id} className="space-y-3">
-                <div className="text-lg font-semibold text-gray-900">{r.createdAt}</div>
-
-                {/* TODO: 星をコンポーネント化して置き換え */}
-                <div className="flex gap-2" aria-label="頑張り度（星）">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <span key={n} className={`${starStyle} ${n <= r.effort ? "text-yellow-400" : "text-gray-300"}`}>
-                      {n <= r.effort ? "★" : "☆"}
-                    </span>
-                  ))}
-                </div>
-
-                {/* タグ */}
-                <div className="flex flex-wrap gap-2">
-                  {r.tags.map((t) => (
-                    <span
-                      key={`${r.id}_${t}`}
-                      className="rounded-full border border-gray-300 bg-white px-3 py-1 text-sm"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-
-                <p className="text-sm leading-6 text-gray-800">{r.content}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section >
     </div >
   );
 }
