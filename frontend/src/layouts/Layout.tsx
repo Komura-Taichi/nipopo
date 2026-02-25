@@ -17,7 +17,7 @@ function tabToPath(tab: Tab): string {
         case "records":
             return "/records";
         case "contact":
-            return "/contact";    
+            return "/contact";
     }
 }
 

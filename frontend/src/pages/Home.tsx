@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from "react-router";
 
-import { secondaryBtnStyle } from "./styles";
-import type { RecentRecord } from "./types";
-import EffortStarsRadio from './components/EffortStarsRadio';
-import RecentRecordCard from './components/RecentRecordCard';
-import RecordSearchBar from './components/RecordSearchBar';
-import TagChip from "./components/TagChip";
-import TagInput from "./components/TagInput";
+import { secondaryBtnStyle } from "../styles";
+import type { RecentRecord } from "../types";
+import EffortStarsRadio from '../components/EffortStarsRadio';
+import RecentRecordCard from '../components/RecentRecordCard';
+import RecordSearchBar from '../components/RecordSearchBar';
+import TagChip from "../components/TagChip";
+import TagInput from "../components/TagInput";
 
 function Home() {
   const maxEffort = 5;

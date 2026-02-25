@@ -2,11 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from "react-router";
 import './index.css';
-import Home from './Home.tsx';
-import RecordsList from "./RecordsList.tsx";
-import Contact from "./Contact.tsx";
-import RecordDetail from './RecordDetail.tsx';
-import Layout from "./Layout.tsx";
+import Home from './pages/Home.tsx';
+import RecordsList from "./pages/RecordsList.tsx";
+import Contact from "./pages/Contact.tsx";
+import RecordDetail from './pages/RecordDetail.tsx';
+import Layout from "./layouts/Layout.tsx";
 
 const router = createBrowserRouter([
   {
