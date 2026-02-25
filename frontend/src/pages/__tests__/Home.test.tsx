@@ -10,7 +10,7 @@ vi.mock("react-router", async () => {
     const actual = await vi.importActual<typeof import("react-router")>("react-router");
     return {
         ...actual,
-        useNavigate: () => navigateMock(),
+        useNavigate: () => navigateMock,
     };
 });
 
@@ -64,7 +64,7 @@ describe("Home", () => {
         expect(screen.getByLabelText("頑張り度の数字表記")).toHaveTextContent("3 / 5")
     });
 
-    // APIアクセス時に有効化
+    // TODO: APIアクセス時に有効化
     test.skip("できごと, タグ, 頑張り度を入力して記録ボタンを押すと記録ボタンが非アクティブになってテキストが変わる", async () => {
         const user = userEvent.setup();
 

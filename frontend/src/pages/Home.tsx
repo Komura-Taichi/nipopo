@@ -8,9 +8,12 @@ import RecentRecordCard from '../components/RecentRecordCard';
 import RecordSearchBar from '../components/RecordSearchBar';
 import TagChip from "../components/TagChip";
 import TagInput from "../components/TagInput";
+import { ROUTES } from '../routes';
 
 function Home() {
   const maxEffort = 5;
+  const [searchQ, setSearchQ] = useState<string>("");
+
   const [inputTag, setInputTag] = useState<string>("");
   const [tags, setTags] = useState<string[]>(["研究", "勉強"]);
 
@@ -36,6 +39,21 @@ function Home() {
   const navigate = useNavigate();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  const onSearch = () => {
+    const q = searchQ.trim();
+
+    // qが空なら絞り込まず一覧へ
+    if (!q) {
+      navigate(ROUTES.records);
+      return;
+    }
+
+    // qをURLに乗せる
+    const params = new URLSearchParams();
+    params.set("search_query", q);
+    navigate(`${ROUTES.records}?${params.toString()}`);
+  }
 
   const onAddTag = () => {
     if (!inputTag.trim()) {
@@ -90,7 +108,11 @@ function Home() {
   return (
     <div className="space-y-8">
       {/* レコード検索 */}
-      <RecordSearchBar />
+      <RecordSearchBar
+        searchQ={searchQ}
+        onChangeQ={setSearchQ}
+        onSearch={onSearch}
+      />
 
       {/* 今日のできごと記入欄 */}
       <section className="rounded-xl border border-gray-300 p-6">
@@ -165,7 +187,7 @@ function Home() {
                 <RecentRecordCard
                   recentRecord={r}
                   maxEffort={maxEffort}
-                  onClickDetail={(recordId) => navigate(`/records/${recordId}`)}
+                  onClickDetail={(recordId) => navigate(ROUTES.recordDetail(recordId))}
                 />
               </div>
             ))}

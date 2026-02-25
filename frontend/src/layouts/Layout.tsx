@@ -1,23 +1,24 @@
 import { Outlet, useLocation, useNavigate } from "react-router";
 import Header from "./Header";
 import type { ActiveTab, Tab } from "./Header";
+import { ROUTES } from "../routes";
 
 
 function getActiveTab(pathname: string): ActiveTab {
-    if (pathname == "/") return "home";
-    if (pathname.startsWith("/records")) return "records";
-    if (pathname.startsWith("/contact")) return "contact";
+    if (pathname == ROUTES.home) return "home";
+    if (pathname.startsWith(ROUTES.records)) return "records";
+    if (pathname.startsWith(ROUTES.contact)) return "contact";
     return undefined;
 }
 
 function tabToPath(tab: Tab): string {
     switch (tab) {
         case "home":
-            return "/";
+            return ROUTES.home;
         case "records":
-            return "/records";
+            return ROUTES.records;
         case "contact":
-            return "/contact";
+            return ROUTES.contact;
     }
 }
 

@@ -3,7 +3,7 @@ import { starStyle } from "../styles";
 type Props = {
     effort: number;
     maxEffort: number;
-    onChange: (n: number) => void;
+    onChange: (clickStar: number) => void;
 }
 
 function EffortStarsRadio({ effort, maxEffort, onChange }: Props) {
