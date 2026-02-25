@@ -356,7 +356,7 @@ func TestTagCreator_Create(t *testing.T) {
 	})
 }
 
-func TestTagLister_List(t *testing.T) {
+func TestTagsLister_List(t *testing.T) {
 	const (
 		userID = "u1"
 		limit  = 20
