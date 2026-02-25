@@ -90,7 +90,7 @@ func (m *mockTagRepoForList) Create(ctx context.Context, userID, name string) (e
 
 func TestTagCreator_Create(t *testing.T) {
 	const (
-		userID = "u1"
+		userID = "u_1"
 		name   = "タグ1"
 	)
 	// --- 正常系のテスト ---
@@ -358,7 +358,7 @@ func TestTagCreator_Create(t *testing.T) {
 
 func TestTagsLister_List(t *testing.T) {
 	const (
-		userID = "u1"
+		userID = "u_1"
 		limit  = 20
 	)
 	t.Run("OK_first_page", func(t *testing.T) {

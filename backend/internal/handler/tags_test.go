@@ -61,7 +61,7 @@ func TestListTags(t *testing.T) {
 			},
 		}
 
-		h := middleware.AuthStub("u1")(handler.ListTags(m))
+		h := middleware.AuthStub("u_1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?q=タグ&limit=5&cursor=cur123", nil)
@@ -75,8 +75,8 @@ func TestListTags(t *testing.T) {
 		if !m.listCalled {
 			t.Fatalf("List was not called")
 		}
-		if m.listUserID != "u1" {
-			t.Fatalf("List userID mismatch: got=%q want=%q", m.listUserID, "u1")
+		if m.listUserID != "u_1" {
+			t.Fatalf("List userID mismatch: got=%q want=%q", m.listUserID, "u_1")
 		}
 		if m.listQ != "タグ" || m.listLimit != 5 || m.listCursor != "cur123" {
 			t.Fatalf("List args mismatch: q=%q limit=%d cursor=%q", m.listQ, m.listLimit, m.listCursor)
@@ -97,7 +97,7 @@ func TestListTags(t *testing.T) {
 
 	t.Run("BadRequest_limit_not_int", func(t *testing.T) {
 		m := &mockTagsLister{}
-		h := middleware.AuthStub("u1")(handler.ListTags(m))
+		h := middleware.AuthStub("u_1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?limit=abc", nil)
@@ -114,7 +114,7 @@ func TestListTags(t *testing.T) {
 
 	t.Run("BadRequest_limit_not_positive_or_zero", func(t *testing.T) {
 		m := &mockTagsLister{}
-		h := middleware.AuthStub("u1")(handler.ListTags(m))
+		h := middleware.AuthStub("u_1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?limit=-1", nil)
@@ -129,9 +129,36 @@ func TestListTags(t *testing.T) {
 		}
 	})
 
+	t.Run("BadRequest_cursor_not_found", func(t *testing.T) {
+		notFoundTagId := "t_20"
+
+		m := &mockTagsLister{
+			listResponse: entity.TagsPage{},
+			listErr:      usecase.ErrInvalidCursor,
+		}
+
+		h := middleware.AuthStub("u_1")(handler.ListTags(m))
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/v1/tags?limit=5&cursor="+notFoundTagId, nil)
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// usecaseのListは呼ばれるはず
+		if !m.listCalled {
+			t.Fatalf("List should be called")
+		}
+		// そもそもusecaseにわたったcursorがおかしくないか？
+		if m.listCursor != notFoundTagId {
+			t.Fatalf("cursor mismatch: got=%q want=%q", m.listCursor, notFoundTagId)
+		}
+	})
+
 	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
 		m := &mockTagsLister{listErr: errors.New("intentional error")}
-		h := middleware.AuthStub("u1")(handler.ListTags(m))
+		h := middleware.AuthStub("u_1")(handler.ListTags(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/v1/tags?limit=5", nil)
@@ -155,7 +182,7 @@ func TestCreateTag(t *testing.T) {
 				Created: true,
 			},
 		}
-		h := middleware.AuthStub("u1")(handler.CreateTag(m))
+		h := middleware.AuthStub("u_1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
@@ -170,8 +197,8 @@ func TestCreateTag(t *testing.T) {
 		if !m.createCalled {
 			t.Fatalf("Create was not called")
 		}
-		if m.createUserID != "u1" {
-			t.Fatalf("Create userID mismatch: got=%q want=%q", m.createUserID, "u1")
+		if m.createUserID != "u_1" {
+			t.Fatalf("Create userID mismatch: got=%q want=%q", m.createUserID, "u_1")
 		}
 		if m.createName != "タグ10" {
 			t.Fatalf("Create args mismatch: name=%q", m.createName)
@@ -192,7 +219,7 @@ func TestCreateTag(t *testing.T) {
 				Created: false,
 			},
 		}
-		h := middleware.AuthStub("u1")(handler.CreateTag(m))
+		h := middleware.AuthStub("u_1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))
@@ -205,7 +232,7 @@ func TestCreateTag(t *testing.T) {
 
 	t.Run("BadRequest_invalid_json", func(t *testing.T) {
 		m := &mockTagCreator{}
-		h := middleware.AuthStub("u1")(handler.CreateTag(m))
+		h := middleware.AuthStub("u_1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{`)))
@@ -223,7 +250,7 @@ func TestCreateTag(t *testing.T) {
 
 	t.Run("BadRequest_empty_name", func(t *testing.T) {
 		m := &mockTagCreator{}
-		h := middleware.AuthStub("u1")(handler.CreateTag(m))
+		h := middleware.AuthStub("u_1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": ""}`)))
@@ -241,7 +268,7 @@ func TestCreateTag(t *testing.T) {
 
 	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
 		m := &mockTagCreator{createErr: errors.New("intentional error")}
-		h := middleware.AuthStub("u1")(handler.CreateTag(m))
+		h := middleware.AuthStub("u_1")(handler.CreateTag(m))
 
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/v1/tags", bytes.NewReader([]byte(`{"name": "タグ10"}`)))

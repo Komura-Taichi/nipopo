@@ -40,6 +40,16 @@ func ListTags(lister usecase.TagsLister) http.HandlerFunc {
 
 		page, err := lister.List(r.Context(), userID, q, limit, cursor)
 		if err != nil {
+			if errors.Is(err, usecase.ErrInvalidCursor) {
+				writeErrorJSON(w, http.StatusBadRequest, "invalid cursor",
+					map[string]any{
+						"field":  "cursor",
+						"value":  cursor,
+						"reason": err.Error(),
+					},
+				)
+				return
+			}
 			writeErrorJSON(w, http.StatusInternalServerError, "internal server error",
 				map[string]any{"reason": err.Error()},
 			)

@@ -26,8 +26,17 @@ func (t *TagUsecase) List(ctx context.Context, userID string, q string, limit in
 		return entity.TagsPage{}, ErrInvalidCursor
 	}
 
-	// 不正なカーソルでなければ、repositoryのエラーもそのまま返す
-	return t.repo.List(ctx, userID, q, limit, cursor)
+	// 不正なカーソルでなくても、そのIDに対応するタグがなければエラー
+	tagsPage, err := t.repo.List(ctx, userID, q, limit, cursor)
+	if err != nil {
+		if errors.Is(err, repository.ErrCursorNotFound) {
+			return entity.TagsPage{}, ErrInvalidCursor
+		}
+		// 未定義のエラーはそのまま返す
+		return entity.TagsPage{}, err
+	}
+
+	return tagsPage, nil
 }
 
 func (t *TagUsecase) Create(ctx context.Context, userID, name string) (CreateTagResult, error) {

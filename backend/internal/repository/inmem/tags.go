@@ -22,6 +22,14 @@ type TagRepository struct {
 	uidAndNameToIdx map[string]map[string]int
 }
 
+func NewTagRepository() *TagRepository {
+	return &TagRepository{
+		mu:              sync.RWMutex{},
+		tags:            make([]entity.Tag, 0),
+		uidAndNameToIdx: make(map[string]map[string]int),
+	}
+}
+
 func (r *TagRepository) FindByName(ctx context.Context, userID string, name string) (entity.Tag, bool, error) {
 	_ = ctx
 
