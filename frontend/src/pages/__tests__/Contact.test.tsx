@@ -28,10 +28,10 @@ describe("Contact", () => {
         ).toBeInTheDocument();
     });
 
-    test("「SNSアカウント」の文字列が表示される", () => {
+    test("「SNS」の文字列が表示される", () => {
         render(<Contact />);
         expect(
-            screen.getByText("SNSアカウント")
+            screen.getByText("SNS")
         ).toBeInTheDocument();
     });
 

@@ -16,7 +16,7 @@ function Header({
             { /* ロゴ */}
             <header className="rounded-t-xl border border-gray-400 bg-white py-10 text-center">
                 <div
-                    className="cursor-pointer text-4xl font-bold tracking-tight text-gray-900"
+                    className="cursor-pointer text-6xl tracking-tight text-sky-500"
                     role="link"
                     tabIndex={0}
                     aria-label="nipopo ホームへ"
@@ -27,7 +27,7 @@ function Header({
                 >
                     nipopo
                 </div>
-                <div className="mt-2 text-lg font-semibold text-gray-700">個人日報アプリ</div>
+                <div className="mt-2 text-xl font-semibold text-gray-700">個人日報アプリ</div>
             </header>
 
             { /* ナビゲーション */}

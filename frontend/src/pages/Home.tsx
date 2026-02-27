@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from "react-router";
 
-import { secondaryBtnStyle } from "../styles";
+import { borderStyle, secondaryBtnStyle } from "../styles";
 import type { RecentRecord } from "../types";
 import EffortStarsRadio from '../components/EffortStarsRadio';
 import RecentRecordCard from '../components/RecentRecordCard';
@@ -115,7 +115,7 @@ function Home() {
       />
 
       {/* 今日のできごと記入欄 */}
-      <section className="rounded-xl border border-gray-300 p-6">
+      <section className={borderStyle}>
         {/* 今日のできごと + タグ */}
         <div className="mb-4 flex items-start gap-4">
           <div className="w-28 pt-2 text-base font-semibold text-gray-800">
@@ -175,7 +175,7 @@ function Home() {
       </section>
 
       {/* 最近のできごと */}
-      <section className="rounded-xl border border-gray-300 p-6">
+      <section className={borderStyle}>
         <div className="mb-4 text-base font-semibold text-gray-800">最近のできごと</div>
 
         {recentRecords.length === 0 ? (
