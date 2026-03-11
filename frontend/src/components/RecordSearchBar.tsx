@@ -5,9 +5,10 @@ type Props = {
     searchQ: string;
     onChangeQ: (searchQ: string) => void;
     onSearch: () => void;
+    onClickDetailSearch: () => void;
 }
 
-function RecordSearchBar({ searchQ, onChangeQ, onSearch }: Props) {
+function RecordSearchBar({ searchQ, onChangeQ, onSearch, onClickDetailSearch }: Props) {
     return (
         <div className="flex items-center">
             <div className="flex flex-1">
@@ -31,7 +32,11 @@ function RecordSearchBar({ searchQ, onChangeQ, onSearch }: Props) {
             </div>
 
             <div className="ml-6">
-                <button type="button" className={`${secondaryBtnStyle} rounded-lg`}>
+                <button
+                    type="button"
+                    className={`${secondaryBtnStyle} rounded-lg`}
+                    onClick={onClickDetailSearch}
+                >
                     詳細検索
                 </button>
             </div>

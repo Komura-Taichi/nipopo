@@ -1,5 +1,5 @@
 import { primaryBtnStyle } from "../styles";
-import type { RecentRecord } from "../types";
+import type { RecentRecord } from "../types/records";
 import EffortStarsDisplay from "./EffortStarsDisplay";
 import TagChip from "./TagChip";
 
