@@ -494,7 +494,7 @@ func TestCreateRecord(t *testing.T) {
 		reqBody := `{
 			"date": "2026-03-11",
 			"effort": 3,
-			"tag_ids": [],
+			"tag_ids": ["t_1"],
 			"body": "内容"
 		}`
 
