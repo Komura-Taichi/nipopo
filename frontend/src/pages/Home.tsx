@@ -1,21 +1,18 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from "react-router";
 
-import Drawer from "@mui/material/Drawer";
-import IconButton from "@mui/material/IconButton";
-
-import { borderStyle, primaryBtnStyle, secondaryBtnStyle } from "../styles";
+import { borderStyle, secondaryBtnStyle } from "../styles";
 import type { RecentRecord } from "../types/records";
 import type { RecordFilter } from '../types/recordFilter';
 import { DEFAULT_FILTER } from '../types/recordFilter';
 import EffortStarsRadio from '../components/EffortStarsRadio';
 import RecentRecordCard from '../components/RecentRecordCard';
 import RecordSearchBar from '../components/RecordSearchBar';
+import RecordSearchDrawer from "../components/RecordSearchDrawer";
 import TagChip from "../components/TagChip";
 import TagInput from "../components/TagInput";
 import { ROUTES } from '../routes';
-
-const minEffort = 0, maxEffort = 5;
+import { MIN_EFFORT, MAX_EFFORT } from '../constants';
 
 // 詳細検索後の一覧画面URLのパラメータ部分 (?以降のところ) を作る
 function buildDetailSearchParams(filter: RecordFilter): string {
@@ -29,8 +26,8 @@ function buildDetailSearchParams(filter: RecordFilter): string {
   for (const tagId of filter.tagIds) params.append("tag_id", tagId);
   if (dateFromNoSpace) params.set("date_from", dateFromNoSpace);
   if (dateToNoSpace) params.set("date_to", dateToNoSpace);
-  if (minEffort <= filter.effortFrom && filter.effortTo <= maxEffort) params.set("effort_from", String(filter.effortFrom));
-  if (minEffort <= filter.effortFrom && filter.effortTo <= maxEffort) params.set("effort_to", String(filter.effortTo));
+  if (MIN_EFFORT <= filter.effortFrom && filter.effortTo <= MAX_EFFORT) params.set("effort_from", String(filter.effortFrom));
+  if (MIN_EFFORT <= filter.effortFrom && filter.effortTo <= MAX_EFFORT) params.set("effort_to", String(filter.effortTo));
 
   const paramsStr = params.toString();
   return paramsStr ? `?${paramsStr}` : "";
@@ -41,8 +38,6 @@ function Home() {
 
   const [filter, setFilter] = useState<RecordFilter>(DEFAULT_FILTER);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
-  const [detailInputTag, setDetailInputTag] = useState<string>("");
-  const [draft, setDraft] = useState<RecordFilter>(filter);
 
   const [inputTag, setInputTag] = useState<string>("");
   const [tags, setTags] = useState<string[]>(["研究", "勉強"]);
@@ -135,41 +130,13 @@ function Home() {
     setDrawerOpen(false);
   };
 
-  const onAddDetailTag = () => {
-    // TODO: tagIdsの中身が現状タグ名となってるが、タグIDに置き換える必要あり。
-    const tag = detailInputTag.trim();
+  const onApplyDraft = (nextDraft: RecordFilter) => {
+    setFilter(nextDraft);
 
-    if (!tag) {
-      alert("タグ名が空です。タグ名を入力してください。");
-      return;
-    }
+    navigate(`${ROUTES.records}${buildDetailSearchParams(nextDraft)}`);
 
-    setDraft((prev) => (prev.tagIds.includes(tag) ? prev : { ...prev, tagIds: [...prev.tagIds, tag] }));
-    setDetailInputTag("");
-  };
-
-  const onApplyDraft = () => {
-    setFilter(draft);
-
-    navigate(`/records${buildDetailSearchParams(draft)}`);
-
-    onCloseDrawer();
-  };
-
-  const onClearDraft = () => {
-    setDraft(DEFAULT_FILTER);
-  };
-
-  const validateConsistency = useMemo(() => {
-    if (draft.effortFrom > draft.effortTo) {
-      return "左側の頑張り度は右側の頑張り度以下にしてください。";
-    }
-    if (draft.dateFrom && draft.dateTo && draft.dateFrom > draft.dateTo) {
-      return "検索対象の開始日は終了日以下にしてください。";
-    }
-
-    return "";
-  }, [draft]);
+    setDrawerOpen(false);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -231,10 +198,15 @@ function Home() {
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-gray-800">頑張り度</span>
             {/* 星 */}
-            <EffortStarsRadio effort={effort} maxEffort={maxEffort} onChange={setEffort} />
+            <EffortStarsRadio
+              effort={effort}
+              maxEffort={MAX_EFFORT}
+              name="effort_new_record"
+              onChange={setEffort}
+            />
 
             <span className="text-sm text-gray-700" aria-label="頑張り度の数字表記">
-              {`${effort} / ${maxEffort}`}
+              {`${effort} / ${MAX_EFFORT}`}
             </span>
           </div>
 
@@ -261,7 +233,7 @@ function Home() {
               <div key={r.id} className="space-y-3">
                 <RecentRecordCard
                   recentRecord={r}
-                  maxEffort={maxEffort}
+                  maxEffort={MAX_EFFORT}
                   onClickDetail={(recordId) => navigate(ROUTES.recordDetail(recordId))}
                 />
               </div>
@@ -287,140 +259,12 @@ function Home() {
       </dialog>
 
       {/* 詳細検索ドロワー */}
-      <Drawer
-        anchor="right"
+      <RecordSearchDrawer
         open={drawerOpen}
+        filter={filter}
         onClose={onCloseDrawer}
-        ModalProps={{ keepMounted: true }}
-        slotProps={{
-          paper: {
-            sx: {
-              width: { xs: "90vw", sm: "40vw" },
-              maxWidth: 560,
-            },
-          },
-        }}
-      >
-        <div className="h-full flex flex-col">
-          {/* ヘッダ */}
-          <div className="px-4 py-3 flex items-center justify-between border-b">
-            <h2 className="text-lg font-semibold">詳細検索</h2>
-            <button
-              type="button"
-              className={`${secondaryBtnStyle} rounded`}
-              onClick={onCloseDrawer}
-              aria-label="詳細検索を閉じる"
-            >
-              閉じる
-            </button>
-          </div>
-
-          {/* 検索条件（ボディ） */}
-          <div className="flex-1 overflow-auto p-4 space-y-6">
-            <div>
-              <label className="block text-sm text-gray-600">内容</label>
-              <textarea
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
-                rows={3}
-                value={draft.q}
-                onChange={(e) => setDraft((prev) => ({ ...prev, q: e.target.value }))}
-                placeholder="検索内容を入力..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600">タグ（AND検索）</label>
-
-              <div
-                className="mt-2 flex flex-wrap items-center gap-2"
-                aria-label="検索タグ一覧"
-              >
-                {draft.tagIds.map((t) => (
-                  <TagChip
-                    key={t}
-                    tagName={t}
-                    onRemove={() =>
-                      setDraft((prev) => ({ ...prev, tagIds: prev.tagIds.filter((cur_t) => cur_t !== t) }))
-                    }
-                  />
-                ))}
-
-                <TagInput
-                  inputTag={detailInputTag}
-                  onChange={setDetailInputTag}
-                  onAddTag={onAddDetailTag}
-                />
-              </div>
-            </div>
-
-            {/* 日付範囲 */}
-            <div>
-              <label className="block text-sm text-gray-600">日付の範囲</label>
-              <div className="mt-2 flex gap-2">
-                <input
-                  type="date"
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                  value={draft.dateFrom}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, dateFrom: e.target.value }))}
-                />
-                <input
-                  type="date"
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                  value={draft.dateTo}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, dateTo: e.target.value }))}
-                />
-              </div>
-
-              {validateConsistency && (
-                <div className="mt-2 text-sm text-red-600">{validateConsistency}</div>
-              )}
-            </div>
-
-            {/* 頑張り度 */}
-            {/* TODO: 頑張り度をスターにする */}
-            <div>
-              <label className="block text-sm text-gray-600">頑張り度の範囲</label>
-              <div className="m-2 flex gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={5}
-                  className="w-full rounded border px-3 py-2"
-                  value={draft.effortFrom}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, effortFrom: Number(e.target.value) }))}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={5}
-                  className="w-full rounded border px-3 py-2"
-                  value={draft.effortTo}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, effortTo: Number(e.target.value) }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* フッタ */}
-          <div className="p-4 border-t flex justify-end gap-2">
-            <button
-              type="button"
-              className={`${secondaryBtnStyle} rounded-lg`}
-              onClick={onClearDraft}
-            >
-              クリア
-            </button>
-            <button
-              type="button"
-              className={`${primaryBtnStyle} rounded-lg`}
-              onClick={onApplyDraft}
-              disabled={Boolean(validateConsistency)}
-            >
-              検索
-            </button>
-          </div>
-        </div>
-      </Drawer>
+        onApplyDraft={onApplyDraft}
+      />
     </div >
   );
 }
