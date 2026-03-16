@@ -3,6 +3,7 @@ package handler_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -116,7 +117,7 @@ func TestCreateRecord(t *testing.T) {
 			"date": "2026-03-11",
 			"effort": 3,
 			"tag_ids": ["t_1", "t_2"],
-			"body": "内容",
+			"body": "内容"
 		}`
 
 		rec := httptest.NewRecorder()
@@ -180,4 +181,336 @@ func TestCreateRecord(t *testing.T) {
 			t.Fatalf("response tags mismatch: got=%+v", got.Tags)
 		}
 	})
+
+	t.Run("BadRequest_invalid_json", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// 壊れたJSON（末尾カンマ）
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"tag_ids": ["t_1"],
+			"body": "内容",
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// 壊れたJSONについて、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_effort_greater_than_5", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// 頑張り度が[0...5]の範囲外
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 6,
+			"tag_ids": ["t_1"],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// > 5 の頑張り度が渡された場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_missing_tag_ids", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// tag_idsが抜けてる
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// タグが指定されなかった場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("empty_tag_id_str", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// tag_idsに含まれるIDが空文字列
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"tag_ids": [""],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// タグに空文字列が含まれる場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_duplicated_tag_ids", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// タグが重複してる
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"tag_ids": ["t_1", "t_1"],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// タグが重複している場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_tag_ids_empty", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// 紐づけられたタグがない
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"tag_ids": [],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// タグが紐づけられなかった場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_invalid_date", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// dateのフォーマットがYYYY-mm-ddじゃない
+		reqBody := `{
+			"date": "2026/03/11",
+			"effort": 3,
+			"tag_ids": ["t_1"],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// dateのフォーマットが不適切な場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_missing_body", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// bodyが抜けてる
+		reqBody := `{
+			"date": "2026/03/11",
+			"effort": 3,
+			"tag_ids": ["t_1"],
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// bodyが抜けてる場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("BadRequest_body_blank", func(t *testing.T) {
+		m := &mockRecordCreator{}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// bodyが空白のみ
+		reqBody := `{
+			"date": "2026/03/11",
+			"effort": 3,
+			"tag_ids": ["t_1"],
+			"body": " "
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（400）
+		assertStatus(t, rec, http.StatusBadRequest)
+
+		// bodyが空白のみの場合について、Createメソッドを呼び出してほしくない
+		if m.createCalled {
+			t.Fatal("Create should not be called on bad request")
+		}
+	})
+
+	t.Run("Conflict_existing_date", func(t *testing.T) {
+		m := &mockRecordCreator{
+			createErr: &usecase.RecordAlreadyExistsError{ExistingID: "r_1"},
+		}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// 指定した日に既に記録が存在している
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"tag_ids": ["t_1"],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（409）とヘッダの確認
+		assertStatus(t, rec, http.StatusConflict)
+		assertContentType(t, rec)
+
+		// リクエスト自体は正常なので、Createメソッドが呼ばれているはず
+		if !m.createCalled {
+			t.Fatal("Create was not called")
+		}
+
+		var got handler.ErrorResponse
+		unmarshalJSON(t, rec.Body.Bytes(), &got)
+		if got.Error.Code != http.StatusConflict {
+			t.Fatalf("status=%d want=%d", got.Error.Code, http.StatusConflict)
+		}
+		if got.Error.Details == nil {
+			t.Fatal("details should not be nil")
+		}
+		v, ok := got.Error.Details["existing_id"]
+		if !ok {
+			t.Fatal("existing_id not found")
+		}
+		existingID, ok := v.(string)
+		if !ok {
+			t.Fatalf("existing_id should be string: got=%T", v)
+		}
+		if existingID != "r_1" {
+			t.Fatalf("existing_id mismatch: got=%q want=%q", existingID, "r_1")
+		}
+	})
+
+	t.Run("InternalServerError_usecase_error", func(t *testing.T) {
+		m := &mockRecordCreator{
+			createErr: errors.New("intentional error"),
+		}
+
+		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
+
+		// 紐づけられたタグがない
+		reqBody := `{
+			"date": "2026-03-11",
+			"effort": 3,
+			"tag_ids": [],
+			"body": "内容"
+		}`
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/v1/records", bytes.NewReader([]byte(reqBody)))
+		req.Header.Set("Content-Type", "application/json")
+
+		h.ServeHTTP(rec, req)
+
+		// ステータスコードの確認（500）
+		assertStatus(t, rec, http.StatusInternalServerError)
+
+		// そもそもCreateメソッドが呼び出されてないなら、おかしい
+		if !m.createCalled {
+			t.Fatal("Create was not called")
+		}
+	})
+
 }
