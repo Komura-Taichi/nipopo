@@ -13,6 +13,7 @@ import TagChip from "../components/TagChip";
 import TagInput from "../components/TagInput";
 import { ROUTES } from '../routes';
 import { MIN_EFFORT, MAX_EFFORT } from '../constants';
+import type { Tag } from '../types/tags';
 
 // 詳細検索後の一覧画面URLのパラメータ部分 (?以降のところ) を作る
 function buildDetailSearchParams(filter: RecordFilter): string {
@@ -34,13 +35,17 @@ function buildDetailSearchParams(filter: RecordFilter): string {
 }
 
 function Home() {
+  const DEFAULT_TAGS: Tag[] = [
+    { id: "t_1", name: "研究" },
+    { id: "t_2", name: "勉強" },
+  ];
   const [searchQ, setSearchQ] = useState<string>("");
 
   const [filter, setFilter] = useState<RecordFilter>(DEFAULT_FILTER);
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
 
   const [inputTag, setInputTag] = useState<string>("");
-  const [tags, setTags] = useState<string[]>(["研究", "勉強"]);
+  const [tags, setTags] = useState<Tag[]>(DEFAULT_TAGS);
 
   const [content, setContent] = useState<string>("");
 
@@ -55,7 +60,7 @@ function Home() {
       id: "r_1",
       createdAt: "2025/12/11",
       effort: 4,
-      tags: ["研究", "勉強"],
+      tags: DEFAULT_TAGS,
       content:
         "今日は、分析データのフィルタリング実装をした。しかし、条件が複雑で実装に苦労した。そこで、先行事例を調査したり、pandasの機能を調べてトライアンドエラーを重ねた。"
     },
@@ -64,6 +69,8 @@ function Home() {
   const navigate = useNavigate();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  const nextTagSeqRef = useRef<number>(3); // t_1, t_2が最初からある前提
 
   const onSearch = () => {
     const q = searchQ.trim();
@@ -81,11 +88,19 @@ function Home() {
   }
 
   const onAddTag = () => {
-    if (!inputTag.trim()) {
+    const name = inputTag.trim();
+    if (!name) {
       alert("タグが空です。タグ名を入力してください。");
       return;
     }
-    setTags((prev: string[]) => [...prev, inputTag]);
+
+    setTags((prev) => {
+      if (prev.some((t) => t.name === name)) return prev;
+
+      const id = `t_${nextTagSeqRef.current++}`;
+      return [...prev, { id, name }];
+    });
+
     setInputTag("");
   };
 
@@ -168,9 +183,9 @@ function Home() {
             <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="今日のタグ一覧">
               {tags.map((t) => (
                 <TagChip
-                  key={t}
-                  tagName={t}
-                  onRemove={() => { setTags((prev) => prev.filter((cur_t) => cur_t !== t)) }}
+                  key={t.id}
+                  tagName={t.name}
+                  onRemove={() => { setTags((prev) => prev.filter((cur_t) => cur_t.id !== t.id)) }}
                 />
               ))}
 

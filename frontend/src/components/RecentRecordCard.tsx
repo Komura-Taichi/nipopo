@@ -21,7 +21,7 @@ function RecentRecordCard({ recentRecord, maxEffort, onClickDetail }: Props) {
                 {/* タグ */}
                 <div className="flex flex-wrap gap-2">
                     {recentRecord.tags.map((t) => (
-                        <TagChip key={t} tagName={t} />
+                        <TagChip key={t.id} tagName={t.name} />
                     ))}
                 </div>
 
