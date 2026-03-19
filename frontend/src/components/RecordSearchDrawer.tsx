@@ -24,7 +24,9 @@ function RecordSearchDrawer({ open, filter, onClose, onApplyDraft }: Props) {
             : "";
 
     const effortError =
-        draft.effortFrom > draft.effortTo
+        draft.effortFrom !== undefined &&
+            draft.effortTo !== undefined &&
+            draft.effortFrom > draft.effortTo
             ? "左側の頑張り度は右側の頑張り度以下にしてください。"
             : "";
     const hasError = Boolean(dateError || effortError);
@@ -34,7 +36,6 @@ function RecordSearchDrawer({ open, filter, onClose, onApplyDraft }: Props) {
     }
 
     const onAddTag = () => {
-        // TODO: tagIdsの中身が現状タグ名となってるが、タグIDに置き換える必要あり。
         const tag = inputTag.trim();
 
         if (!tag) {

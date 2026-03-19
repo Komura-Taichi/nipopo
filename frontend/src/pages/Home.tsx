@@ -15,8 +15,8 @@ import { ROUTES } from '../routes';
 import { MIN_EFFORT, MAX_EFFORT } from '../constants';
 import type { Tag } from '../types/tags';
 
-// 詳細検索後の一覧画面URLのパラメータ部分 (?以降のところ) を作る
-function buildDetailSearchParams(filter: RecordFilter): string {
+// 検索後のURLのパラメータ部分 (?以降のところ) を作る
+function buildSearchParams(filter: RecordFilter): string {
   const params = new URLSearchParams();
 
   const qNoSpace = filter.q.trim();
@@ -27,8 +27,11 @@ function buildDetailSearchParams(filter: RecordFilter): string {
   for (const tagId of filter.tagIds) params.append("tag_id", tagId);
   if (dateFromNoSpace) params.set("date_from", dateFromNoSpace);
   if (dateToNoSpace) params.set("date_to", dateToNoSpace);
-  if (MIN_EFFORT <= filter.effortFrom && filter.effortTo <= MAX_EFFORT) params.set("effort_from", String(filter.effortFrom));
-  if (MIN_EFFORT <= filter.effortFrom && filter.effortTo <= MAX_EFFORT) params.set("effort_to", String(filter.effortTo));
+  if (filter.effortFrom !== undefined && MIN_EFFORT <= filter.effortFrom) params.set("effort_from", String(filter.effortFrom));
+  if (filter.effortTo !== undefined && filter.effortTo <= MAX_EFFORT) params.set("effort_to", String(filter.effortTo));
+
+  if (filter.orderBy) params.set("order_by", filter.orderBy);
+  if (filter.order) params.set("order", filter.order);
 
   const paramsStr = params.toString();
   return paramsStr ? `?${paramsStr}` : "";
@@ -49,7 +52,7 @@ function Home() {
 
   const [content, setContent] = useState<string>("");
 
-  const [effort, setEffort] = useState<number>(0);
+  const [effort, setEffort] = useState<number>(MIN_EFFORT);
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -75,17 +78,20 @@ function Home() {
   const onSearch = () => {
     const q = searchQ.trim();
 
-    // qが空なら絞り込まず一覧へ
-    if (!q) {
-      navigate(ROUTES.records);
-      return;
-    }
+    const nextFilter: RecordFilter = {
+      ...filter,
+      q,
+    };
+    setFilter(nextFilter);
 
-    // qをURLに乗せる
-    const params = new URLSearchParams();
-    params.set("search_query", q);
-    navigate(`${ROUTES.records}?${params.toString()}`);
+    // qやorderBy/orderをURLに乗せる
+    navigate(`${ROUTES.records}${buildSearchParams(nextFilter)}`);
   }
+
+  // フィルタの一部のみ変更する
+  const onPatchFilter = (patch: Partial<RecordFilter>) => {
+    setFilter((prev) => ({ ...prev, ...patch }));
+  };
 
   const onAddTag = () => {
     const name = inputTag.trim();
@@ -129,7 +135,7 @@ function Home() {
 
     // 入力欄をリセット
     setContent("");
-    setEffort(0);
+    setEffort(MIN_EFFORT);
     setTags([]);
     setInputTag("");
 
@@ -148,7 +154,7 @@ function Home() {
   const onApplyDraft = (nextDraft: RecordFilter) => {
     setFilter(nextDraft);
 
-    navigate(`${ROUTES.records}${buildDetailSearchParams(nextDraft)}`);
+    navigate(`${ROUTES.records}${buildSearchParams(nextDraft)}`);
 
     setDrawerOpen(false);
   }
@@ -165,6 +171,8 @@ function Home() {
     <div className="space-y-8">
       {/* レコード検索 */}
       <RecordSearchBar
+        filter={filter}
+        onPatchFilter={onPatchFilter}
         searchQ={searchQ}
         onChangeQ={setSearchQ}
         onSearch={onSearch}
@@ -248,7 +256,6 @@ function Home() {
               <div key={r.id} className="space-y-3">
                 <RecentRecordCard
                   recentRecord={r}
-                  maxEffort={MAX_EFFORT}
                   onClickDetail={(recordId) => navigate(ROUTES.recordDetail(recordId))}
                 />
               </div>

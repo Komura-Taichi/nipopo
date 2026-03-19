@@ -5,8 +5,10 @@ export type RecordFilter = {
     tagIds: string[];
     dateFrom: string;
     dateTo: string;
-    effortFrom: number;
-    effortTo: number;
+    effortFrom?: number;
+    effortTo?: number;
+    orderBy: string;
+    order: string;
 };
 
 export const DEFAULT_FILTER: RecordFilter = {
@@ -14,6 +16,8 @@ export const DEFAULT_FILTER: RecordFilter = {
     tagIds: [],
     dateFrom: "",
     dateTo: "",
-    effortFrom: 0,
-    effortTo: 0,
+    effortFrom: undefined,
+    effortTo: undefined,
+    orderBy: "date",
+    order: "desc",
 }

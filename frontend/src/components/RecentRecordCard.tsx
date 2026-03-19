@@ -5,18 +5,17 @@ import TagChip from "./TagChip";
 
 type Props = {
     recentRecord: RecentRecord;
-    maxEffort: number;
     onClickDetail: (recordId: string) => void;
 };
 
-function RecentRecordCard({ recentRecord, maxEffort, onClickDetail }: Props) {
+function RecentRecordCard({ recentRecord, onClickDetail }: Props) {
     return (
         <div className="flex items-start justify-between gap-4">
             {/* 左側: 内容 */}
             <div className="min-w-0 flex-1 space-y-3">
                 <div className="text-lg font-semibold text-gray-900">{recentRecord.createdAt}</div>
 
-                <EffortStarsDisplay effort={recentRecord.effort} maxEffort={maxEffort} />
+                <EffortStarsDisplay effort={recentRecord.effort} />
 
                 {/* タグ */}
                 <div className="flex flex-wrap gap-2">

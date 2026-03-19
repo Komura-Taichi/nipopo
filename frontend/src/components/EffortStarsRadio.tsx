@@ -1,7 +1,7 @@
 import { starStyle } from "../styles";
 
 type Props = {
-    effort: number;
+    effort?: number;
     maxEffort: number;
     name: string;
     onChange: (clickStar: number) => void;
@@ -23,8 +23,8 @@ function EffortStarsRadio({ effort, maxEffort, name, onChange }: Props) {
                         checked={effort === n}
                         onChange={() => onChange(n)}
                     />
-                    <span className={`${starStyle} ${n <= effort ? "text-yellow-400" : "text-gray-300"}`}>
-                        {n <= effort ? "★" : "☆"}
+                    <span className={`${starStyle} ${effort !== undefined && n <= effort ? "text-yellow-400" : "text-gray-300"}`}>
+                        {effort !== undefined && n <= effort ? "★" : "☆"}
                     </span>
                 </label>
             ))}
