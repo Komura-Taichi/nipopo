@@ -64,6 +64,10 @@ func (m *mockTagRepoForCreate) Create(ctx context.Context, userID, name string) 
 }
 
 // --- インタフェースを満たすためのダミーメソッド ---
+func (m *mockTagRepoForCreate) FindByIDs(ctx context.Context, userID string, ids []string) ([]entity.Tag, error) {
+	return []entity.Tag{}, nil
+}
+
 func (m *mockTagRepoForCreate) List(ctx context.Context, userID, q string, limit int, cursor string) (entity.TagsPage, error) {
 	return entity.TagsPage{}, nil
 }
@@ -78,6 +82,10 @@ func (m *mockTagRepoForList) List(ctx context.Context, userID, q string, limit i
 }
 
 // --- インタフェースを満たすためのダミーメソッド ---
+func (m *mockTagRepoForList) FindByIDs(ctx context.Context, userID string, ids []string) ([]entity.Tag, error) {
+	return []entity.Tag{}, nil
+}
+
 func (m *mockTagRepoForList) FindByName(ctx context.Context, userID, name string) (entity.Tag, bool, error) {
 	return entity.Tag{}, false, nil
 }
