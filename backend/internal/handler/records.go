@@ -48,8 +48,8 @@ func CreateRecord(creator usecase.RecordCreator) http.HandlerFunc {
 			return
 		}
 
-		// 頑張り度が範囲外 (0...5の外) 場合のテストに対応
-		if req.Effort < 0 || req.Effort > 5 {
+		// 頑張り度が範囲外 (1...5の外) 場合のテストに対応
+		if req.Effort < 1 || req.Effort > 5 {
 			writeErrorJSON(w, http.StatusBadRequest, "invalid effort",
 				map[string]any{"field": "effort", "value": req.Effort},
 			)

@@ -215,7 +215,7 @@ func TestCreateRecord(t *testing.T) {
 
 		h := middleware.AuthStub("u_1")(handler.CreateRecord(m))
 
-		// 頑張り度が[0...5]の範囲外
+		// 頑張り度が[1...5]の範囲外
 		reqBody := `{
 			"date": "2026-03-11",
 			"effort": 6,
